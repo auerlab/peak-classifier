@@ -1,0 +1,39 @@
+.TH PEAK-CLASSIFIER 1
+.SH NAME    \" Section header
+.PP
+
+PEAK-CLASSIFIER \- Classify peaks in a BED file according to features in
+a GFF
+
+.SH SYNOPSIS
+.PP
+.nf 
+.na 
+peak-classifier BED-file GFF-file
+.ad
+.fi
+
+.SH "PURPOSE"
+
+.B Peak-classifier
+classifies all peaks in the given BED file according to features found in
+the provided GFF.  Peaks are typically called from ChIP/ATAC-Seq
+experiments using tools such as MACS2.
+
+.SH "DESCRIPTION"
+
+Features include all those explicitly named in the GFF as well as introns,
+which are computed as regions between the given exons, and promoters which
+are regions just upstream of the TSS.
+
+.SH "SEE ALSO"
+MACS2, DESeq2
+
+.SH BUGS
+Please report bugs to the author and send patches in unified diff format.
+(man diff for more information)
+
+.SH AUTHOR
+.nf
+.na
+J. Bacon

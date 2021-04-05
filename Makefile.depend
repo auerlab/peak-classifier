@@ -1,0 +1,3 @@
+peak-classifier.o: peak-classifier.c peak-classifier.h protos.h
+	${CC} -c ${CFLAGS} peak-classifier.c
+
