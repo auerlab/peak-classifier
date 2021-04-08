@@ -25,11 +25,9 @@ int     main(int argc,char *argv[])
 	usage(argv);
     
     /* Process flags */
-    for (c = 1; c < argc; ++c)
-    {
-	if ( (*argv[c] == '-') && (strcmp(argv[c],"-") != 0) )
-	    ;
-    }
+    for (c = 1; (c < argc) && (*argv[c] == '-') && (strcmp(argv[c],"-") != 0);
+	 ++c)
+	;
     
     if ( strcmp(argv[c], "-") == 0 )
 	bed_stream = stdin;
@@ -73,7 +71,7 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
     bed_skip_header(bed_stream);
     while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
     {
-	printf("%s\n", bed_feature.chromosome);
+	bed_write_feature(stdout, &bed_feature, BED_FIELD_ALL);
     }
     return EX_OK;
 }
