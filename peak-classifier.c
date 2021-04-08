@@ -51,6 +51,29 @@ int     main(int argc,char *argv[])
 	    exit(EX_NOINPUT);
 	}
     
+    return classify(bed_stream, gff_stream);
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Read through BED and GFF files, classifying each peak in the BED
+ *      file according to overlapping features in the GFF.
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-05  Jason Bacon Begin
+ ***************************************************************************/
+
+int     classify(FILE *bed_stream, FILE *gff_stream)
+
+{
+    bed_feature_t   bed_feature;
+    
+    while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
+    {
+	printf("%s\n", bed_feature.chromosome);
+    }
     return EX_OK;
 }
 
