@@ -68,7 +68,7 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
 
 {
     uint64_t    last_pos = 0;
-    char        last_chrom[BED_CHROMOSOME_MAX_CHARS + 1];
+    char        last_chrom[BIO_CHROMOSOME_MAX_CHARS + 1];
     bed_feature_t   bed_feature;
 
     bed_skip_header(bed_stream);

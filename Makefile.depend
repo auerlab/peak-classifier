@@ -1,4 +1,5 @@
-peak-classifier.o: peak-classifier.c peak-classifier.h \
-  ../local/include/bedio.h ../local/include/biolibc.h protos.h
+peak-classifier.o: peak-classifier.c ../local/include/biostring.h \
+  ../local/include/biolibc.h peak-classifier.h ../local/include/bedio.h \
+  protos.h
 	${CC} -c ${CFLAGS} peak-classifier.c
 
