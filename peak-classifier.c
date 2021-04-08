@@ -69,7 +69,8 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
 
 {
     bed_feature_t   bed_feature;
-    
+
+    bed_skip_header(bed_stream);
     while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
     {
 	printf("%s\n", bed_feature.chromosome);
