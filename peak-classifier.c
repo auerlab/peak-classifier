@@ -13,14 +13,18 @@
 #include <string.h>
 #include <errno.h>
 #include <biostring.h>
+#include <stdbool.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
 
 {
-    int     c;
+    int     c,
+	    status;
     FILE    *bed_stream,
 	    *gff_stream;
+    bool    bed_is_pipe = false,
+	    gff_is_pipe = false;
     
     if ( argc < 3 )
 	usage(argv);
@@ -33,7 +37,7 @@ int     main(int argc,char *argv[])
     if ( strcmp(argv[c], "-") == 0 )
 	bed_stream = stdin;
     else
-	if ( (bed_stream = fopen(argv[c], "r")) == NULL )
+	if ( (bed_stream = bio_open(argv[c], "r", &bed_is_pipe)) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -43,14 +47,23 @@ int     main(int argc,char *argv[])
     if ( strcmp(argv[++c], "-") == 0 )
 	gff_stream = stdin;
     else
-	if ( (gff_stream = fopen(argv[c], "r")) == NULL )
+	if ( (gff_stream = bio_open(argv[c], "r", &gff_is_pipe)) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
 	    exit(EX_NOINPUT);
 	}
     
-    return classify(bed_stream, gff_stream);
+    status = classify(bed_stream, gff_stream);
+    if ( bed_is_pipe )
+	pclose(bed_stream);
+    else
+	fclose(bed_stream);
+    if ( gff_is_pipe )
+	pclose(gff_stream);
+    else
+	fclose(gff_stream);
+    return status;
 }
 
 
@@ -115,4 +128,65 @@ void    usage(char *argv[])
 {
     fprintf(stderr, "Usage: %s BED-file GFF-file\n", argv[0]);
     exit(EX_USAGE);
+}
+
+
+FILE    *bio_open(char *filename, char *mode, bool *is_pipe)
+
+{
+    char    *ext = strrchr(filename, '.'),
+	    cmd[CMD_MAX + 1];
+    
+    if ( (strcmp(mode, "r") != 0 ) && (strcmp(mode, "w") != 0) )
+    {
+	fprintf(stderr, "bio_open(): Only \"r\" and \"w\" modes supported.\n");
+	return NULL;
+    }
+    
+    if ( ext == NULL )
+    {
+	fprintf(stderr, "bio_open(): No filename extension on %s.\n", filename);
+	return NULL;
+    }
+
+    if ( *mode == 'r' )
+    {
+	if ( strcmp(ext, ".gz") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "gzcat %s", filename);
+	    return popen(cmd, mode);
+	}
+	else if ( strcmp(ext, ".bz2") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "bzcat %s", filename);
+	    return popen(cmd, mode);
+	}
+	else if ( strcmp(ext, ".xz") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "xzcat %s", filename);
+	    return popen(cmd, mode);
+	}
+	else
+	    return fopen(filename, mode);
+    }
+    else    // "w"
+    {
+	if ( strcmp(ext, ".gz") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "gzip -c > %s", filename);
+	    return popen(cmd, mode);
+	}
+	else if ( strcmp(ext, ".bz2") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "bzip2 -c > %s", filename);
+	    return popen(cmd, mode);
+	}
+	else if ( strcmp(ext, ".xz") == 0 )
+	{
+	    snprintf(cmd, CMD_MAX, "xz -c > %s", filename);
+	    return popen(cmd, mode);
+	}
+	else
+	    return fopen(filename, mode);
+    }
 }
