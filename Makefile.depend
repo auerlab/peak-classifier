@@ -1,5 +1,5 @@
 peak-classifier.o: peak-classifier.c ../local/include/biostring.h \
-  ../local/include/biolibc.h peak-classifier.h ../local/include/bedio.h \
-  ../local/include/gffio.h protos.h
+  ../local/include/biolibc.h ../local/include/bedio.h \
+  ../local/include/gffio.h peak-classifier.h protos.h
 	${CC} -c ${CFLAGS} peak-classifier.c
 
