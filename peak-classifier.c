@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <biostring.h>
 #include <stdbool.h>
+#include <sys/param.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -80,16 +81,59 @@ int     main(int argc,char *argv[])
 int     classify(FILE *bed_stream, FILE *gff_stream)
 
 {
-    uint64_t    last_pos = 0;
-    char        last_chrom[BIO_CHROMOSOME_MAX_CHARS + 1];
+    uint64_t        last_pos = 0,
+		    peak_center;
+    char            last_chrom[BIO_CHROMOSOME_MAX_CHARS + 1];
     bed_feature_t   bed_feature;
+    gff_feature_t   gff_feature;
+    int             dist;
+    unsigned long   total_bed_features = 0,
+		    exon_overlaps = 0,
+		    inside_exon = 0,
+		    outside_exon = 0;
+    bio_overlap_t   overlap;
 
     bed_skip_header(bed_stream);
+    gff_skip_header(gff_stream);
     while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
     {
 	bed_check_order(&bed_feature, last_chrom, last_pos);
-	bed_write_feature(stdout, &bed_feature, BED_FIELD_ALL);
+	
+	/* Skip GFF features before this bed feature */
+	while ( (gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK) 
+		&& ((strcmp(gff_feature.feature,"exon") != 0) ||
+		    ( (dist=bed_gff_cmp(&bed_feature, &gff_feature,
+					&overlap)) > 0)) )
+	    ;
+	if ( dist == 0 )
+	{
+	    puts("===");
+	    bed_write_feature(stdout, &bed_feature, BED_FIELD_ALL);
+	    gff_write_feature(stdout, &gff_feature, BED_FIELD_ALL);
+	    bio_print_overlap(&overlap, "Peak", "Exon");
+	    peak_center = (BED_END_POS(&bed_feature) +
+			    BED_START_POS(&bed_feature)) / 2;
+	    printf("Peak center     : %" PRIu64 , peak_center);
+	    if ( (peak_center + 1 >= GFF_START_POS(&gff_feature)) &&
+		 (peak_center <= GFF_END_POS(&gff_feature)) )
+	    {
+		puts(" (inside exon)");
+		++inside_exon;
+	    }
+	    else
+	    {
+		puts(" (outside exon)");
+		++outside_exon;
+	    }
+	    ++exon_overlaps;
+	}
+	++total_bed_features;
     }
+    printf("\nTotal peaks:    %lu\n"
+	   "Exon overlaps:  %lu\n"
+	   "Center inside:  %lu\n"
+	   "Center outside: %lu\n",
+	   total_bed_features, exon_overlaps, inside_exon, outside_exon);
     return EX_OK;
 }
 
@@ -107,15 +151,15 @@ void    bed_check_order(bed_feature_t *bed_feature, char last_chrom[],
 			uint64_t last_pos)
 
 {
-    if ( chromosome_name_cmp(bed_feature->chromosome, last_chrom) == 0 )
+    if ( chromosome_name_cmp(BED_CHROMOSOME(bed_feature), last_chrom) == 0 )
     {
-	if ( bed_feature->start_pos < last_pos )
+	if ( BED_START_POS(bed_feature) < last_pos )
 	{
 	    fprintf(stderr, "peak-classifier: BED file not sorted by start position.\n");
 	    exit(EX_DATAERR);
 	}
     }
-    else if ( chromosome_name_cmp(bed_feature->chromosome, last_chrom) < 0 )
+    else if ( chromosome_name_cmp(BED_CHROMOSOME(bed_feature), last_chrom) < 0 )
     {
 	fprintf(stderr, "peak-classifier: BED file not sorted by start chromosome.\n");
 	exit(EX_DATAERR);
@@ -189,4 +233,50 @@ FILE    *bio_open(char *filename, char *mode, bool *is_pipe)
 	else
 	    return fopen(filename, mode);
     }
+}
+
+
+int     bed_gff_cmp(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
+		    bio_overlap_t *overlap)
+
+{
+    int         chromosome_cmp;
+    uint64_t    bed_start, bed_end, bed_len,
+		gff_start, gff_end, gff_len;
+    
+    chromosome_cmp = chromosome_name_cmp(BED_CHROMOSOME(bed_feature),
+					 GFF_SEQUENCE(gff_feature));
+    if ( chromosome_cmp == 0 )
+    {
+	/*
+	 *  BED positions are 0-based, with end non-inclusive, which can
+	 *  also be viewed as an inclusive 1-based coordinate
+	 *  GFF is 1-based, both ends inclusive
+	 */
+	
+	if ( BED_END_POS(bed_feature) < GFF_START_POS(gff_feature) )
+	{
+	    bio_set_overlap(overlap, 0, 0, 0, 0);
+	    return -1;
+	}
+	else if ( BED_START_POS(bed_feature) + 1 > GFF_END_POS(gff_feature) )
+	{
+	    bio_set_overlap(overlap, 0, 0, 0, 0);
+	    return 1;
+	}
+	else
+	{
+	    bed_start = BED_START_POS(bed_feature);
+	    bed_end = BED_END_POS(bed_feature);
+	    gff_start = GFF_START_POS(gff_feature);
+	    gff_end = GFF_END_POS(gff_feature);
+	    bed_len = bed_end - bed_start;
+	    gff_len = gff_end - gff_start + 1;
+	    bio_set_overlap(overlap, bed_len, gff_len,
+			    MAX(bed_start+1, gff_start),
+			    MIN(bed_end, gff_end));
+	    return 0;
+	}
+    }
+    return chromosome_cmp;
 }
