@@ -87,6 +87,11 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
 		    outside_feature = 0;
     bio_overlap_t   overlap;
 
+    /*
+     *  Convert GFF to a bed file including potential promoter regions and
+     *  introns, which are not listed in the GFF.
+     */
+    
     bed_skip_header(bed_stream);
     gff_skip_header(gff_stream);
     while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
