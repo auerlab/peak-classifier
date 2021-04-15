@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <biostring.h>
 #include <bedio.h>
 #include <gffio.h>
@@ -22,8 +23,9 @@ int     main(int argc,char *argv[])
 {
     int     c,
 	    status;
-    FILE    *bed_stream,
-	    *gff_stream;
+    FILE    *peak_stream,
+	    *gff_stream,
+	    *feature_stream;
     
     if ( argc < 3 )
 	usage(argv);
@@ -34,9 +36,9 @@ int     main(int argc,char *argv[])
 	;
     
     if ( strcmp(argv[c], "-") == 0 )
-	bed_stream = stdin;
+	peak_stream = stdin;
     else
-	if ( (bed_stream = bio_fopen(argv[c], "r")) == NULL )
+	if ( (peak_stream = bio_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -52,11 +54,140 @@ int     main(int argc,char *argv[])
 		    strerror(errno));
 	    exit(EX_NOINPUT);
 	}
-    
-    status = classify(bed_stream, gff_stream);
-    bio_fclose(bed_stream);
+
+    if ( (status = filter_gff(gff_stream, &feature_stream)) == EX_OK )
+    {
+	status = EX_OK; //classify(peak_stream, feature_stream);
+	fclose(feature_stream);
+    }
+    else
+	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
+		strerror(errno));
+    bio_fclose(peak_stream);
     bio_fclose(gff_stream);
     return status;
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Filter the GFF file and insert explicit intron and upstream
+ *      (promoter) regions, returning a FILE pointer to a BED file
+ *      containing all features of interest.
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-15  Jason Bacon Begin
+ ***************************************************************************/
+
+int     filter_gff(FILE *gff_stream, FILE **feature_stream)
+
+{
+    bed_feature_t   bed_feature;
+    gff_feature_t   gff_feature;
+    char            *feature,
+		    *strand,
+		    name[BED_NAME_MAX_CHARS + 1];
+    bool            first_exon,
+		    exon,
+		    gene,
+		    utr5;
+    uint64_t        intron_start,
+		    intron_end;
+    
+    if ( (*feature_stream = fopen("filtered.bed", "w+")) == NULL )
+    {
+	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
+		strerror(errno));
+	return EX_CANTCREAT;
+    }
+
+    // Write all of the first 4 fields to the feature file
+    bed_set_fields(&bed_feature, 4);
+    
+    gff_skip_header(gff_stream);
+    while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
+    {
+	feature = GFF_FEATURE(&gff_feature);
+	exon = (strcmp(feature, "exon") == 0);
+	utr5 = (strcmp(feature, "five_prime_UTR") == 0);
+	gene = (strcmp(feature, "gene") == 0);
+	
+	if ( gene )
+	{
+	    strand = GFF_STRAND(&gff_feature);
+	    first_exon = true;
+	    
+	    // Write out upstream regions for likely regulatory elements
+	    bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
+	    /*
+	     *  BED start is 0-based and inclusive
+	     *  GFF is 1-based and inclusive
+	     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
+	     *  GFF is the same
+	     */
+	    if ( *strand == '+' )
+	    {
+		bed_set_start_pos(&bed_feature, GFF_START_POS(&gff_feature) - 1002);
+		bed_set_end_pos(&bed_feature, GFF_START_POS(&gff_feature) - 2);
+	    }
+	    else
+	    {
+		bed_set_start_pos(&bed_feature, GFF_END_POS(&gff_feature) + 1);
+		bed_set_end_pos(&bed_feature, GFF_END_POS(&gff_feature) + 1001);
+	    }
+	    
+	    snprintf(name, BED_NAME_MAX_CHARS, "upstream1000%s", strand);
+	    bed_set_name(&bed_feature, name);
+	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
+	}
+
+	// Generate introns between exons
+	if ( exon )
+	{
+	    if ( !first_exon )
+	    {
+		intron_end = GFF_START_POS(&gff_feature) - 2;
+		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
+		/*
+		 *  BED start is 0-based and inclusive
+		 *  GFF is 1-based and inclusive
+		 */
+		bed_set_start_pos(&bed_feature, intron_start);
+		/*
+		 *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
+		 *  GFF is the same
+		 */
+		bed_set_end_pos(&bed_feature, intron_end);
+		snprintf(name, BED_NAME_MAX_CHARS, "intron%s", strand);
+		bed_set_name(&bed_feature, name);
+		bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
+	    }
+	    
+	    intron_start = GFF_END_POS(&gff_feature) + 1;
+	    first_exon = false;
+	}
+	if ( exon || utr5 || gene )
+	{
+	    bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
+	    /*
+	     *  BED start is 0-based and inclusive
+	     *  GFF is 1-based and inclusive
+	     */
+	    bed_set_start_pos(&bed_feature, GFF_START_POS(&gff_feature) - 1);
+	    /*
+	     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
+	     *  GFF is the same
+	     */
+	    bed_set_end_pos(&bed_feature, GFF_END_POS(&gff_feature));
+	    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
+		    GFF_FEATURE(&gff_feature), strand);
+	    bed_set_name(&bed_feature, name);
+	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
+	}
+    }
+    rewind(*feature_stream);
+    return EX_OK;
 }
 
 
@@ -70,7 +201,7 @@ int     main(int argc,char *argv[])
  *  2021-04-05  Jason Bacon Begin
  ***************************************************************************/
 
-int     classify(FILE *bed_stream, FILE *gff_stream)
+int     classify(FILE *peak_stream, FILE *gff_stream)
 
 {
     uint64_t        last_pos = 0,
@@ -92,9 +223,8 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
      *  introns, which are not listed in the GFF.
      */
     
-    bed_skip_header(bed_stream);
-    gff_skip_header(gff_stream);
-    while ( bed_read_feature(bed_stream, &bed_feature) == BIO_READ_OK )
+    bed_skip_header(peak_stream);
+    while ( bed_read_feature(peak_stream, &bed_feature) == BIO_READ_OK )
     {
 	bed_check_order(&bed_feature, last_chrom, last_pos);
 	
@@ -120,7 +250,6 @@ int     classify(FILE *bed_stream, FILE *gff_stream)
 	{
 	    feature = GFF_FEATURE(&gff_feature);
 	    if ( (strcmp(feature, "five_prime_UTR") == 0) ||
-		 (strcmp(feature, "three_prime_UTR") == 0) ||
 		 (strcmp(feature, "lnc_RNA") == 0) ||
 		 (strcmp(feature, "miRNA") == 0) ||
 		 (strcmp(feature, "ncRNA") == 0) ||
