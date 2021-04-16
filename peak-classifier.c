@@ -13,6 +13,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <ctype.h>
 #include <biostring.h>
 #include <bedio.h>
 #include <gffio.h>
@@ -26,6 +27,8 @@ int     main(int argc,char *argv[])
     FILE    *peak_stream,
 	    *gff_stream,
 	    *feature_stream;
+    char    *upstream_boundaries = "1000",
+	    *p;
     
     if ( argc < 3 )
 	usage(argv);
@@ -33,7 +36,16 @@ int     main(int argc,char *argv[])
     /* Process flags */
     for (c = 1; (c < argc) && (*argv[c] == '-') && (strcmp(argv[c],"-") != 0);
 	 ++c)
-	;
+    {
+	if ( strcmp(argv[c], "--upstream-regions") == 0 )
+	{
+	    upstream_boundaries = argv[++c];
+	    for (p = upstream_boundaries; *p != '\0'; ++p)
+		if ( !isdigit(*p) && (*p != ',') )
+		    usage(argv);
+	    ++c;
+	}
+    }
     
     if ( strcmp(argv[c], "-") == 0 )
 	peak_stream = stdin;
@@ -55,7 +67,8 @@ int     main(int argc,char *argv[])
 	    exit(EX_NOINPUT);
 	}
 
-    if ( (status = filter_gff(gff_stream, &feature_stream)) == EX_OK )
+    if ( (status = filter_gff(gff_stream, &feature_stream,
+				upstream_boundaries)) == EX_OK )
     {
 	status = EX_OK; //classify(peak_stream, feature_stream);
 	fclose(feature_stream);
@@ -80,7 +93,8 @@ int     main(int argc,char *argv[])
  *  2021-04-15  Jason Bacon Begin
  ***************************************************************************/
 
-int     filter_gff(FILE *gff_stream, FILE **feature_stream)
+int     filter_gff(FILE *gff_stream, FILE **feature_stream,
+		   const char *upstream_boundaries)
 
 {
     bed_feature_t   bed_feature;
@@ -93,7 +107,8 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream)
 		    gene,
 		    utr5;
     uint64_t        intron_start,
-		    intron_end;
+		    intron_end,
+		    bounds[MAX_UPSTREAM_BOUNDS] = { 1000 };
     
     if ( (*feature_stream = fopen("filtered.bed", "w+")) == NULL )
     {
@@ -128,16 +143,19 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream)
 	     */
 	    if ( *strand == '+' )
 	    {
-		bed_set_start_pos(&bed_feature, GFF_START_POS(&gff_feature) - 1002);
+		bed_set_start_pos(&bed_feature,
+				  GFF_START_POS(&gff_feature) - bounds[0] - 2);
 		bed_set_end_pos(&bed_feature, GFF_START_POS(&gff_feature) - 2);
 	    }
 	    else
 	    {
 		bed_set_start_pos(&bed_feature, GFF_END_POS(&gff_feature) + 1);
-		bed_set_end_pos(&bed_feature, GFF_END_POS(&gff_feature) + 1001);
+		bed_set_end_pos(&bed_feature,
+				GFF_END_POS(&gff_feature) + bounds[0] + 1);
 	    }
 	    
-	    snprintf(name, BED_NAME_MAX_CHARS, "upstream1000%s", strand);
+	    snprintf(name, BED_NAME_MAX_CHARS, "upstream%" PRIu64 "%s",
+		    bounds[0], strand);
 	    bed_set_name(&bed_feature, name);
 	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
 	}
@@ -331,6 +349,6 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 void    usage(char *argv[])
 
 {
-    fprintf(stderr, "Usage: %s BED-file GFF-file\n", argv[0]);
+    fprintf(stderr, "Usage: %s [--upstream-boundaries pos[,pos ...]] BED-file GFF-file\n", argv[0]);
     exit(EX_USAGE);
 }
