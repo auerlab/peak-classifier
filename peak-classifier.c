@@ -26,8 +26,8 @@ int     main(int argc,char *argv[])
     int     c,
 	    status;
     FILE    *peak_stream,
-	    *gff_stream,
-	    *feature_stream;
+	    *gff_stream;
+	    // Default, override with --upstream-boundaries
     char    *upstream_boundaries = "1000",
 	    *p;
     
@@ -73,11 +73,12 @@ int     main(int argc,char *argv[])
 	    exit(EX_NOINPUT);
 	}
 
-    if ( (status = filter_gff(gff_stream, &feature_stream,
-			      upstream_boundaries)) == EX_OK )
+    if ( (status = filter_gff(gff_stream, upstream_boundaries)) == EX_OK )
     {
-	status = EX_OK; //classify(peak_stream, feature_stream);
-	fclose(feature_stream);
+	status = EX_OK;
+	puts("Sorting...");
+	system("sort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+	//classify(peak_stream, feature_stream);
     }
     else
 	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
@@ -99,10 +100,11 @@ int     main(int argc,char *argv[])
  *  2021-04-15  Jason Bacon Begin
  ***************************************************************************/
 
-int     filter_gff(FILE *gff_stream, FILE **feature_stream,
+int     filter_gff(FILE *gff_stream,
 		   const char *upstream_boundaries)
 
 {
+    FILE            *feature_stream;
     bed_feature_t   bed_feature;
     gff_feature_t   gff_feature;
     char            *feature,
@@ -115,27 +117,28 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
     uint64_t        intron_start,
 		    intron_end;
     plist_t         plist = PLIST_INIT;
-    size_t          c;
+    //size_t          c;
     
-    if ( (*feature_stream = fopen("filtered.bed", "w+")) == NULL )
+    if ( (feature_stream = fopen("gff-filtered.bed", "w+")) == NULL )
     {
 	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
 		strerror(errno));
 	return EX_CANTCREAT;
     }
-    fprintf(*feature_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
+    fprintf(feature_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
     
-    fprintf(stderr, "Parsing %s\n", upstream_boundaries);
+    //fprintf(stderr, "Parsing %s\n", upstream_boundaries);
     plist_from_csv(&plist, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
     // Upstream features are 1 to first pos, first + 1 to second, etc.
     plist_add_position(&plist, 0);
     plist_sort(&plist, PLIST_ASCENDING);
-    for (c = 0; c < PLIST_COUNT(&plist); ++c)
-	printf("%" PRIu64 "\n", PLIST_POSITIONS(&plist, c));
+    //for (c = 0; c < PLIST_COUNT(&plist); ++c)
+    //    printf("%" PRIu64 "\n", PLIST_POSITIONS(&plist, c));
 
     // Write all of the first 4 fields to the feature file
     bed_set_fields(&bed_feature, 4);
     
+    puts("Filtering...");
     gff_skip_header(gff_stream);
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
@@ -147,7 +150,7 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 	if ( gene )
 	{
 	    // Write out upstream regions for likely regulatory elements
-	    generate_upstream_features(*feature_stream, &gff_feature, &plist);
+	    generate_upstream_features(feature_stream, &gff_feature, &plist);
 	    strand = GFF_STRAND(&gff_feature);
 	    first_exon = true;
 	}
@@ -157,7 +160,7 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 	{
 	    if ( !first_exon )
 	    {
-		intron_end = GFF_START_POS(&gff_feature) - 2;
+		intron_end = GFF_START_POS(&gff_feature) - 1;
 		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
 		/*
 		 *  BED start is 0-based and inclusive
@@ -171,10 +174,10 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 		bed_set_end_pos(&bed_feature, intron_end);
 		snprintf(name, BED_NAME_MAX_CHARS, "%sintron", strand);
 		bed_set_name(&bed_feature, name);
-		bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
+		bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
 	    }
 	    
-	    intron_start = GFF_END_POS(&gff_feature) + 1;
+	    intron_start = GFF_END_POS(&gff_feature);
 	    first_exon = false;
 	}
 	if ( exon || utr5 || gene )
@@ -193,10 +196,10 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 	    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
 		    strand, GFF_FEATURE(&gff_feature));
 	    bed_set_name(&bed_feature, name);
-	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
+	    bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
 	}
     }
-    rewind(*feature_stream);
+    fclose(feature_stream);
     return EX_OK;
 }
 

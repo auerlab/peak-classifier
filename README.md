@@ -18,3 +18,15 @@ intergenic regions.
 In contrast, peak-classifier is a simple Unix command that takes a BED file
 and a GFF file as inputs and reports all peak classifications in a matter of
 seconds.
+
+Admittedly, this particular problem doesn't really justify writing optimal C
+code, since the crappiest implementation I can imagine would not take more
+than hours to run for a typical ATAC-Seq peak set.  However:
+
+    * It's an opportunity to develop and test biolibc code that will be
+      useful for bigger data
+    * This is more about making peak classification convenient than making it
+      fast
+    * It never hurts to hone your C skills
+    * There's no such thing as a program that's too fast
+
