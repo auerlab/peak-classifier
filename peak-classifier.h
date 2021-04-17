@@ -1,4 +1,4 @@
 
-#define     MAX_UPSTREAM_BOUNDS 64
+#define MAX_UPSTREAM_BOUNDARIES 64
 
 #include "protos.h"

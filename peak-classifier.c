@@ -17,6 +17,7 @@
 #include <biostring.h>
 #include <bedio.h>
 #include <gffio.h>
+#include <plist.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -34,19 +35,24 @@ int     main(int argc,char *argv[])
 	usage(argv);
     
     /* Process flags */
-    for (c = 1; (c < argc) && (*argv[c] == '-') && (strcmp(argv[c],"-") != 0);
+    for (c = 1; (c < argc) && (memcmp(argv[c],"--",2) == 0);
 	 ++c)
     {
-	if ( strcmp(argv[c], "--upstream-regions") == 0 )
+	if ( strcmp(argv[c], "--upstream-boundaries") == 0 )
 	{
 	    upstream_boundaries = argv[++c];
 	    for (p = upstream_boundaries; *p != '\0'; ++p)
 		if ( !isdigit(*p) && (*p != ',') )
+		{
+		    fputs("peak-classifier: List should be comma-separated with no space.\n", stderr);
 		    usage(argv);
-	    ++c;
+		}
 	}
+	else
+	    usage(argv);
     }
-    
+
+    fprintf(stderr, "bed file = %s\n", argv[c]);
     if ( strcmp(argv[c], "-") == 0 )
 	peak_stream = stdin;
     else
@@ -68,7 +74,7 @@ int     main(int argc,char *argv[])
 	}
 
     if ( (status = filter_gff(gff_stream, &feature_stream,
-				upstream_boundaries)) == EX_OK )
+			      upstream_boundaries)) == EX_OK )
     {
 	status = EX_OK; //classify(peak_stream, feature_stream);
 	fclose(feature_stream);
@@ -107,8 +113,9 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 		    gene,
 		    utr5;
     uint64_t        intron_start,
-		    intron_end,
-		    bounds[MAX_UPSTREAM_BOUNDS] = { 1000 };
+		    intron_end;
+    plist_t         plist = PLIST_INIT;
+    size_t          c;
     
     if ( (*feature_stream = fopen("filtered.bed", "w+")) == NULL )
     {
@@ -116,6 +123,15 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 		strerror(errno));
 	return EX_CANTCREAT;
     }
+    fprintf(*feature_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
+    
+    fprintf(stderr, "Parsing %s\n", upstream_boundaries);
+    plist_from_csv(&plist, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
+    // Upstream features are 1 to first pos, first + 1 to second, etc.
+    plist_add_position(&plist, 0);
+    plist_sort(&plist, PLIST_ASCENDING);
+    for (c = 0; c < PLIST_COUNT(&plist); ++c)
+	printf("%" PRIu64 "\n", PLIST_POSITIONS(&plist, c));
 
     // Write all of the first 4 fields to the feature file
     bed_set_fields(&bed_feature, 4);
@@ -130,34 +146,10 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 	
 	if ( gene )
 	{
+	    // Write out upstream regions for likely regulatory elements
+	    generate_upstream_features(*feature_stream, &gff_feature, &plist);
 	    strand = GFF_STRAND(&gff_feature);
 	    first_exon = true;
-	    
-	    // Write out upstream regions for likely regulatory elements
-	    bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
-	    /*
-	     *  BED start is 0-based and inclusive
-	     *  GFF is 1-based and inclusive
-	     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
-	     *  GFF is the same
-	     */
-	    if ( *strand == '+' )
-	    {
-		bed_set_start_pos(&bed_feature,
-				  GFF_START_POS(&gff_feature) - bounds[0] - 2);
-		bed_set_end_pos(&bed_feature, GFF_START_POS(&gff_feature) - 2);
-	    }
-	    else
-	    {
-		bed_set_start_pos(&bed_feature, GFF_END_POS(&gff_feature) + 1);
-		bed_set_end_pos(&bed_feature,
-				GFF_END_POS(&gff_feature) + bounds[0] + 1);
-	    }
-	    
-	    snprintf(name, BED_NAME_MAX_CHARS, "upstream%" PRIu64 "%s",
-		    bounds[0], strand);
-	    bed_set_name(&bed_feature, name);
-	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
 	}
 
 	// Generate introns between exons
@@ -177,7 +169,7 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 		 *  GFF is the same
 		 */
 		bed_set_end_pos(&bed_feature, intron_end);
-		snprintf(name, BED_NAME_MAX_CHARS, "intron%s", strand);
+		snprintf(name, BED_NAME_MAX_CHARS, "%sintron", strand);
 		bed_set_name(&bed_feature, name);
 		bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
 	    }
@@ -199,7 +191,7 @@ int     filter_gff(FILE *gff_stream, FILE **feature_stream,
 	     */
 	    bed_set_end_pos(&bed_feature, GFF_END_POS(&gff_feature));
 	    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
-		    GFF_FEATURE(&gff_feature), strand);
+		    strand, GFF_FEATURE(&gff_feature));
 	    bed_set_name(&bed_feature, name);
 	    bed_write_feature(*feature_stream, &bed_feature, BED_FIELD_ALL);
 	}
@@ -342,6 +334,64 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 	puts("======");
 	bed_write_feature(stdout, bed_feature, BED_FIELD_ALL);
 	gff_write_feature(stdout, &gff_promoter, BED_FIELD_ALL);
+    }
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Generate upstream region features from a GFF feature and a list
+ *      of upstream distances
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-17  Jason Bacon Begin
+ ***************************************************************************/
+
+void    generate_upstream_features(FILE *feature_stream,
+				   gff_feature_t *gff_feature, plist_t *plist)
+
+{
+    bed_feature_t   bed_feature;
+    char            *strand,
+		    name[BED_NAME_MAX_CHARS + 1];
+    size_t          c;
+    
+    strand = GFF_STRAND(gff_feature);
+    bed_set_fields(&bed_feature, 4);
+
+    for (c = 1; c < PLIST_COUNT(plist); ++c)
+    {
+	bed_set_chromosome(&bed_feature, GFF_SEQUENCE(gff_feature));
+	/*
+	 *  BED start is 0-based and inclusive
+	 *  GFF is 1-based and inclusive
+	 *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
+	 *  GFF is the same
+	 */
+	if ( *strand == '+' )
+	{
+	    bed_set_start_pos(&bed_feature,
+			      GFF_START_POS(gff_feature) - 
+			      PLIST_POSITIONS(plist, c) - 1);
+	    bed_set_end_pos(&bed_feature,
+			    GFF_START_POS(gff_feature) -
+			    PLIST_POSITIONS(plist, c - 1) - 1);
+	}
+	else
+	{
+	    bed_set_start_pos(&bed_feature,
+			      GFF_END_POS(gff_feature) +
+			      PLIST_POSITIONS(plist, c - 1));
+	    bed_set_end_pos(&bed_feature,
+			    GFF_END_POS(gff_feature) + 
+			    PLIST_POSITIONS(plist, c));
+	}
+	
+	snprintf(name, BED_NAME_MAX_CHARS, "%supstream%" PRIu64,
+		 strand, PLIST_POSITIONS(plist, c));
+	bed_set_name(&bed_feature, name);
+	bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
     }
 }
 
