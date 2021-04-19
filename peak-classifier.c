@@ -139,7 +139,6 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 	    fputs("###\n", bed_stream);
 	else if ( strstr(feature, "gene") != NULL )
 	{
-	    // gff_plot_exons(gff_stream, &gff_feature);
 	    // Write out upstream regions for likely regulatory elements
 	    strand = GFF_STRAND(&gff_feature);
 	    gff_to_bed(&bed_feature, &gff_feature);
@@ -182,7 +181,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 				gff_feature_t *gene_feature)
 
 {
-    gff_feature_t   sub_feature;
+    gff_feature_t   subfeature;
     bed_feature_t   bed_feature;
     bool            first_exon = true,
 		    exon,
@@ -193,22 +192,25 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		    *strand,
 		    name[BED_NAME_MAX_CHARS + 1];
     
+    //printf("Gene: %" PRIu64 ", %" PRIu64 "\n",
+    //        gene_feature->start_pos, gene_feature->end_pos);
     bed_set_fields(&bed_feature, 4);
-    while ( (gff_read_feature(gff_stream, &sub_feature) == BIO_READ_OK) &&
-	    (strcmp(sub_feature.feature, "###") != 0) )
+    while ( (gff_read_feature(gff_stream, &subfeature) == BIO_READ_OK) &&
+	    (strcmp(subfeature.feature, "###") != 0) )
     {
-	feature = GFF_FEATURE(&sub_feature);
+	feature = GFF_FEATURE(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 	utr5 = (strcmp(feature, "five_prime_UTR") == 0);
-	strand = GFF_STRAND(&sub_feature);
+	strand = GFF_STRAND(&subfeature);
+	//gff_plot_subfeature(stdout, gene_feature, &subfeature);
 	
 	// Generate introns between exons
 	if ( exon )
 	{
 	    if ( !first_exon )
 	    {
-		intron_end = GFF_START_POS(&sub_feature) - 1;
-		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&sub_feature));
+		intron_end = GFF_START_POS(&subfeature) - 1;
+		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&subfeature));
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
@@ -224,12 +226,12 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	    }
 	    
-	    intron_start = GFF_END_POS(&sub_feature);
+	    intron_start = GFF_END_POS(&subfeature);
 	    first_exon = false;
 	}
 	if ( exon || utr5 )
 	{
-	    gff_to_bed(&bed_feature, &sub_feature);
+	    gff_to_bed(&bed_feature, &subfeature);
 	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	}
     }
@@ -482,40 +484,29 @@ void    generate_upstream_features(FILE *feature_stream,
  *  2021-04-18  Jason Bacon Begin
  ***************************************************************************/
 
-void    gff_plot_exons(FILE *gff_stream, gff_feature_t *gene)
+void    gff_plot_subfeature(FILE *stream, gff_feature_t *gene,
+			    gff_feature_t *subfeature)
 
 {
-    gff_feature_t   sub_feature;
     uint64_t        gene_len = gene->end_pos - gene->start_pos,
 		    start,
 		    end;
     int             line_ch,
 		    c;
-    long            file_pos;
     
-    file_pos = ftell(gff_stream);
-    printf("Gene: %" PRIu64 ", %" PRIu64 "\n", gene->start_pos, gene->end_pos);
-    while ( (gff_read_feature(gff_stream, &sub_feature) != BIO_READ_EOF) &&
-	    (sub_feature.start_pos <= gene->end_pos) )
-    {
-	if ( strcmp(sub_feature.feature, "exon") == 0 )
-	{
-	    /*printf("Exon: %" PRIu64 ", %" PRIu64 "\n",
-		    sub_feature.start_pos, sub_feature.end_pos);*/
-	    start = (sub_feature.start_pos - gene->start_pos) * 78 / gene_len;
-	    end = (sub_feature.end_pos - gene->start_pos) * 78 / gene_len + 1;
-	    line_ch = *sub_feature.strand == '+'? '>' : '<';
-	    //printf("%" PRIu64 ", %" PRIu64 "\n", start, end);
-	    for (c = 0; c < start; ++c)
-		putchar(line_ch);
-	    while ( c++ < end )
-		putchar('E');
-	    while ( c++ < 78 )
-		putchar(line_ch);
-	    putchar('\n');
-	}
-    }
-    fseek(gff_stream, file_pos, SEEK_SET);
+    /*printf("Exon: %" PRIu64 ", %" PRIu64 "\n",
+	    subfeature.start_pos, subfeature->end_pos);*/
+    start = (subfeature->start_pos - gene->start_pos) * 78 / gene_len;
+    end = (subfeature->end_pos - gene->start_pos) * 78 / gene_len + 1;
+    line_ch = *subfeature->strand == '+'? '>' : '<';
+    //printf("%" PRIu64 ", %" PRIu64 "\n", start, end);
+    for (c = 0; c < start; ++c)
+	putc(line_ch, stream);
+    while ( c++ < end )
+	putc('E', stream);
+    while ( c++ < 78 )
+	putc(line_ch, stream);
+    putc('\n', stream);
 }
 
 
