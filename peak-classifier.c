@@ -119,7 +119,7 @@ int     filter_gff(FILE *gff_stream,
     plist_t         plist = PLIST_INIT;
     //size_t          c;
     
-    if ( (feature_stream = fopen("gff-filtered.bed", "w+")) == NULL )
+    if ( (feature_stream = fopen("gff-filtered.bed", "w")) == NULL )
     {
 	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
 		strerror(errno));
@@ -149,6 +149,7 @@ int     filter_gff(FILE *gff_stream,
 	
 	if ( gene )
 	{
+	    gff_plot_exons(gff_stream, &gff_feature);
 	    // Write out upstream regions for likely regulatory elements
 	    generate_upstream_features(feature_stream, &gff_feature, &plist);
 	    strand = GFF_STRAND(&gff_feature);
@@ -396,6 +397,52 @@ void    generate_upstream_features(FILE *feature_stream,
 	bed_set_name(&bed_feature, name);
 	bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
     }
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Plot exons in the given gene
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-18  Jason Bacon Begin
+ ***************************************************************************/
+
+void    gff_plot_exons(FILE *gff_stream, gff_feature_t *gene)
+
+{
+    gff_feature_t   sub_feature;
+    uint64_t        gene_len = gene->end_pos - gene->start_pos,
+		    start,
+		    end;
+    int             line_ch,
+		    c;
+    long            file_pos;
+    
+    file_pos = ftell(gff_stream);
+    printf("Gene: %" PRIu64 ", %" PRIu64 "\n", gene->start_pos, gene->end_pos);
+    while ( (gff_read_feature(gff_stream, &sub_feature) != BIO_READ_EOF) &&
+	    (sub_feature.start_pos <= gene->end_pos) )
+    {
+	if ( strcmp(sub_feature.feature, "exon") == 0 )
+	{
+	    /*printf("Exon: %" PRIu64 ", %" PRIu64 "\n",
+		    sub_feature.start_pos, sub_feature.end_pos);*/
+	    start = (sub_feature.start_pos - gene->start_pos) * 78 / gene_len;
+	    end = (sub_feature.end_pos - gene->start_pos) * 78 / gene_len + 1;
+	    line_ch = *sub_feature.strand == '+'? '>' : '<';
+	    //printf("%" PRIu64 ", %" PRIu64 "\n", start, end);
+	    for (c = 0; c < start; ++c)
+		putchar(line_ch);
+	    while ( c++ < end )
+		putchar('E');
+	    while ( c++ < 78 )
+		putchar(line_ch);
+	    putchar('\n');
+	}
+    }
+    fseek(gff_stream, file_pos, SEEK_SET);
 }
 
 
