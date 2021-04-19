@@ -28,7 +28,7 @@ int     main(int argc,char *argv[])
     FILE    *peak_stream,
 	    *gff_stream;
 	    // Default, override with --upstream-boundaries
-    char    *upstream_boundaries = "1000",
+    char    *upstream_boundaries = "1000,10000,100000",
 	    *p;
     
     if ( argc < 3 )
@@ -76,8 +76,8 @@ int     main(int argc,char *argv[])
     if ( (status = filter_gff(gff_stream, upstream_boundaries)) == EX_OK )
     {
 	status = EX_OK;
-	puts("Sorting...");
-	system("sort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+	//puts("Sorting...");
+	//system("sort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
 	//classify(peak_stream, feature_stream);
     }
     else
@@ -100,32 +100,24 @@ int     main(int argc,char *argv[])
  *  2021-04-15  Jason Bacon Begin
  ***************************************************************************/
 
-int     filter_gff(FILE *gff_stream,
-		   const char *upstream_boundaries)
+int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 
 {
-    FILE            *feature_stream;
+    FILE            *bed_stream;
     bed_feature_t   bed_feature;
     gff_feature_t   gff_feature;
     char            *feature,
-		    *strand,
-		    name[BED_NAME_MAX_CHARS + 1];
-    bool            first_exon,
-		    exon,
-		    gene,
-		    utr5;
-    uint64_t        intron_start,
-		    intron_end;
+		    *strand;
     plist_t         plist = PLIST_INIT;
     //size_t          c;
     
-    if ( (feature_stream = fopen("gff-filtered.bed", "w")) == NULL )
+    if ( (bed_stream = fopen("gff-filtered.bed", "w")) == NULL )
     {
 	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
 		strerror(errno));
 	return EX_CANTCREAT;
     }
-    fprintf(feature_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
+    fprintf(bed_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
     
     //fprintf(stderr, "Parsing %s\n", upstream_boundaries);
     plist_from_csv(&plist, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
@@ -143,26 +135,80 @@ int     filter_gff(FILE *gff_stream,
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
 	feature = GFF_FEATURE(&gff_feature);
+	if ( strcmp(feature, "###") == 0 )
+	    fputs("###\n", bed_stream);
+	else if ( strstr(feature, "gene") != NULL )
+	{
+	    // gff_plot_exons(gff_stream, &gff_feature);
+	    // Write out upstream regions for likely regulatory elements
+	    strand = GFF_STRAND(&gff_feature);
+	    gff_to_bed(&bed_feature, &gff_feature);
+	    
+	    if ( *strand == '+' )
+	    {
+		generate_upstream_features(bed_stream, &gff_feature, &plist);
+		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
+	    }
+	    gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
+	    if ( *strand == '-' )
+	    {
+		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
+		generate_upstream_features(bed_stream, &gff_feature, &plist);
+	    }
+	    fputs("###\n", bed_stream);
+	}
+	else if ( strcmp(feature, "chromosome") != 0 )
+	{
+	    gff_to_bed(&bed_feature, &gff_feature);
+	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
+	    fputs("###\n", bed_stream);
+	}
+    }
+    fclose(bed_stream);
+    return EX_OK;
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Process sub-features of a gene
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-19  Jason Bacon Begin
+ ***************************************************************************/
+
+void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
+				gff_feature_t *gene_feature)
+
+{
+    gff_feature_t   sub_feature;
+    bed_feature_t   bed_feature;
+    bool            first_exon = true,
+		    exon,
+		    utr5;
+    uint64_t        intron_start,
+		    intron_end;
+    char            *feature,
+		    *strand,
+		    name[BED_NAME_MAX_CHARS + 1];
+    
+    bed_set_fields(&bed_feature, 4);
+    while ( (gff_read_feature(gff_stream, &sub_feature) == BIO_READ_OK) &&
+	    (strcmp(sub_feature.feature, "###") != 0) )
+    {
+	feature = GFF_FEATURE(&sub_feature);
 	exon = (strcmp(feature, "exon") == 0);
 	utr5 = (strcmp(feature, "five_prime_UTR") == 0);
-	gene = (strcmp(feature, "gene") == 0);
+	strand = GFF_STRAND(&sub_feature);
 	
-	if ( gene )
-	{
-	    gff_plot_exons(gff_stream, &gff_feature);
-	    // Write out upstream regions for likely regulatory elements
-	    generate_upstream_features(feature_stream, &gff_feature, &plist);
-	    strand = GFF_STRAND(&gff_feature);
-	    first_exon = true;
-	}
-
 	// Generate introns between exons
 	if ( exon )
 	{
 	    if ( !first_exon )
 	    {
-		intron_end = GFF_START_POS(&gff_feature) - 1;
-		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
+		intron_end = GFF_START_POS(&sub_feature) - 1;
+		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&sub_feature));
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
@@ -175,33 +221,50 @@ int     filter_gff(FILE *gff_stream,
 		bed_set_end_pos(&bed_feature, intron_end);
 		snprintf(name, BED_NAME_MAX_CHARS, "%sintron", strand);
 		bed_set_name(&bed_feature, name);
-		bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
+		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	    }
 	    
-	    intron_start = GFF_END_POS(&gff_feature);
+	    intron_start = GFF_END_POS(&sub_feature);
 	    first_exon = false;
 	}
-	if ( exon || utr5 || gene )
+	if ( exon || utr5 )
 	{
-	    bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&gff_feature));
-	    /*
-	     *  BED start is 0-based and inclusive
-	     *  GFF is 1-based and inclusive
-	     */
-	    bed_set_start_pos(&bed_feature, GFF_START_POS(&gff_feature) - 1);
-	    /*
-	     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
-	     *  GFF is the same
-	     */
-	    bed_set_end_pos(&bed_feature, GFF_END_POS(&gff_feature));
-	    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
-		    strand, GFF_FEATURE(&gff_feature));
-	    bed_set_name(&bed_feature, name);
-	    bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
+	    gff_to_bed(&bed_feature, &sub_feature);
+	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	}
     }
-    fclose(feature_stream);
-    return EX_OK;
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Copy GFF fields to a BED structure
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-19  Jason Bacon Begin
+ ***************************************************************************/
+
+void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
+
+{
+    char    name[BED_NAME_MAX_CHARS + 1],
+	    *strand = GFF_STRAND(gff_feature);
+    
+    bed_set_chromosome(bed_feature, GFF_SEQUENCE(gff_feature));
+    /*
+     *  BED start is 0-based and inclusive
+     *  GFF is 1-based and inclusive
+     */
+    bed_set_start_pos(bed_feature, GFF_START_POS(gff_feature) - 1);
+    /*
+     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
+     *  GFF is the same
+     */
+    bed_set_end_pos(bed_feature, GFF_END_POS(gff_feature));
+    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
+	     strand, GFF_FEATURE(gff_feature));
+    bed_set_name(bed_feature, name);
 }
 
 
@@ -356,17 +419,17 @@ void    generate_upstream_features(FILE *feature_stream,
 				   gff_feature_t *gff_feature, plist_t *plist)
 
 {
-    bed_feature_t   bed_feature;
+    bed_feature_t   bed_feature[MAX_UPSTREAM_BOUNDARIES];
     char            *strand,
 		    name[BED_NAME_MAX_CHARS + 1];
-    size_t          c;
+    int             c;
     
     strand = GFF_STRAND(gff_feature);
-    bed_set_fields(&bed_feature, 4);
 
-    for (c = 1; c < PLIST_COUNT(plist); ++c)
+    for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
     {
-	bed_set_chromosome(&bed_feature, GFF_SEQUENCE(gff_feature));
+	bed_set_fields(&bed_feature[c], 4);
+	bed_set_chromosome(&bed_feature[c], GFF_SEQUENCE(gff_feature));
 	/*
 	 *  BED start is 0-based and inclusive
 	 *  GFF is 1-based and inclusive
@@ -375,27 +438,37 @@ void    generate_upstream_features(FILE *feature_stream,
 	 */
 	if ( *strand == '+' )
 	{
-	    bed_set_start_pos(&bed_feature,
+	    bed_set_start_pos(&bed_feature[c],
 			      GFF_START_POS(gff_feature) - 
-			      PLIST_POSITIONS(plist, c) - 1);
-	    bed_set_end_pos(&bed_feature,
+			      PLIST_POSITIONS(plist, c + 1) - 1);
+	    bed_set_end_pos(&bed_feature[c],
 			    GFF_START_POS(gff_feature) -
-			    PLIST_POSITIONS(plist, c - 1) - 1);
+			    PLIST_POSITIONS(plist, c) - 1);
 	}
 	else
 	{
-	    bed_set_start_pos(&bed_feature,
+	    bed_set_start_pos(&bed_feature[c],
 			      GFF_END_POS(gff_feature) +
-			      PLIST_POSITIONS(plist, c - 1));
-	    bed_set_end_pos(&bed_feature,
+			      PLIST_POSITIONS(plist, c));
+	    bed_set_end_pos(&bed_feature[c],
 			    GFF_END_POS(gff_feature) + 
-			    PLIST_POSITIONS(plist, c));
+			    PLIST_POSITIONS(plist, c + 1));
 	}
 	
 	snprintf(name, BED_NAME_MAX_CHARS, "%supstream%" PRIu64,
-		 strand, PLIST_POSITIONS(plist, c));
-	bed_set_name(&bed_feature, name);
-	bed_write_feature(feature_stream, &bed_feature, BED_FIELD_ALL);
+		 strand, PLIST_POSITIONS(plist, c + 1));
+	bed_set_name(&bed_feature[c], name);
+    }
+    
+    if ( *strand == '-' )
+    {
+	for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
+	    bed_write_feature(feature_stream, &bed_feature[c], BED_FIELD_ALL);
+    }
+    else
+    {
+	for (c = PLIST_COUNT(plist) - 2; c >= 0; --c)
+	    bed_write_feature(feature_stream, &bed_feature[c], BED_FIELD_ALL);
     }
 }
 
