@@ -1,0 +1,5 @@
+#!/bin/sh -e
+
+gzcat Mus_musculus.GRCm39.103.gff3.gz \
+    | awk '{ print $1, $4, $5, $3, $7 }' \
+    | more
