@@ -46,7 +46,7 @@ ax.barh(y_pos, lengths, 0.3, left=fstarts, align='center')
 ax.set_yticks(y_pos)
 ax.set_yticklabels(features)
 ax.invert_yaxis()  # labels read top-to-bottom
-ax.set_xlabel('Len')
+ax.set_xlabel('Position')
 ax.set_title('Gene subfeatures')
 
 pyplot.show()
