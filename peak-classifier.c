@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <limits.h>
+#include <sys/stat.h>
 #include <biostring.h>
 #include <bedio.h>
 #include <gffio.h>
@@ -191,13 +193,33 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     char            *feature,
 		    *strand,
 		    name[BED_NAME_MAX_CHARS + 1];
+    FILE            *gene_stream;
+    char            gene_filename[PATH_MAX + 1];
+
+    bed_set_fields(&bed_feature, 4);
+    
+    snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s.bed",
+	    GFF_SEQUENCE(gene_feature),
+	    GFF_START_POS_STR(gene_feature), GFF_END_POS_STR(gene_feature));
+    mkdir("Genes", 0755);
+    if ( (gene_stream = fopen(gene_filename, "w")) == NULL )
+    {
+	fprintf(stderr, "gff_process_subfeature(): Cannot open %s: %s\n",
+		gene_filename, strerror(errno));
+	exit(EX_CANTCREAT);
+    }
+    gff_to_bed(&bed_feature, gene_feature);
+    bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
     
     //printf("Gene: %" PRIu64 ", %" PRIu64 "\n",
     //        gene_feature->start_pos, gene_feature->end_pos);
-    bed_set_fields(&bed_feature, 4);
     while ( (gff_read_feature(gff_stream, &subfeature) == BIO_READ_OK) &&
 	    (strcmp(subfeature.feature, "###") != 0) )
     {
+	// Debug
+	gff_to_bed(&bed_feature, &subfeature);
+	bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
+	
 	feature = GFF_FEATURE(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 	utr5 = (strcmp(feature, "five_prime_UTR") == 0);
@@ -235,6 +257,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	}
     }
+    fclose(gene_stream);
 }
 
 
