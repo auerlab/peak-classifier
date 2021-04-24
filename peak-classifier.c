@@ -136,28 +136,32 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     gff_skip_header(gff_stream);
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
-	feature = GFF_NAME(&gff_feature);
-	if ( strcmp(feature, "###") == 0 )
-	    fputs("###\n", bed_stream);
-	else if ( strstr(feature, "gene") != NULL )
+	// FIXME: Create a --autosomes-only flag to activate this check
+	if ( numeric_string(GFF_SEQUENCE(&gff_feature)) )
 	{
-	    // Write out upstream regions for likely regulatory elements
-	    strand = GFF_STRAND(&gff_feature);
-	    gff_to_bed(&bed_feature, &gff_feature);
-	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
-	    
-	    if ( *strand == '+' )
-		generate_upstream_features(bed_stream, &gff_feature, &plist);
-	    gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
-	    if ( *strand == '-' )
-		generate_upstream_features(bed_stream, &gff_feature, &plist);
-	    fputs("###\n", bed_stream);
-	}
-	else if ( strcmp(feature, "chromosome") != 0 )
-	{
-	    gff_to_bed(&bed_feature, &gff_feature);
-	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
-	    fputs("###\n", bed_stream);
+	    feature = GFF_NAME(&gff_feature);
+	    if ( strcmp(feature, "###") == 0 )
+		fputs("###\n", bed_stream);
+	    else if ( strstr(feature, "gene") != NULL )
+	    {
+		// Write out upstream regions for likely regulatory elements
+		strand = GFF_STRAND(&gff_feature);
+		gff_to_bed(&bed_feature, &gff_feature);
+		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
+		
+		if ( *strand == '+' )
+		    generate_upstream_features(bed_stream, &gff_feature, &plist);
+		gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
+		if ( *strand == '-' )
+		    generate_upstream_features(bed_stream, &gff_feature, &plist);
+		fputs("###\n", bed_stream);
+	    }
+	    else if ( strcmp(feature, "chromosome") != 0 )
+	    {
+		gff_to_bed(&bed_feature, &gff_feature);
+		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
+		fputs("###\n", bed_stream);
+	    }
 	}
     }
     fclose(bed_stream);
@@ -188,11 +192,12 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     char            *feature,
 		    *strand,
 		    name[BED_NAME_MAX_CHARS + 1];
-    FILE            *gene_stream;
+    // FILE            *gene_stream;
     char            gene_filename[PATH_MAX + 1];
 
     bed_set_fields(&bed_feature, 4);
     
+    /*
     snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s-raw.bed",
 	    GFF_SEQUENCE(gene_feature),
 	    GFF_START_POS_STR(gene_feature), GFF_END_POS_STR(gene_feature));
@@ -205,6 +210,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     }
     gff_to_bed(&bed_feature, gene_feature);
     bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
+    */
     
     //printf("Gene: %" PRIu64 ", %" PRIu64 "\n",
     //        gene_feature->start_pos, gene_feature->end_pos);
@@ -212,8 +218,10 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    (strcmp(subfeature.name, "###") != 0) )
     {
 	// Debug
+	/*
 	gff_to_bed(&bed_feature, &subfeature);
 	bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
+	*/
 	
 	feature = GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
@@ -221,7 +229,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	strand = GFF_STRAND(&subfeature);
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
-	if (strstr(subfeature.name, "RNA") != NULL)
+	if ( (strstr(subfeature.name, "RNA") != NULL) ||
+	     (strstr(subfeature.name, "_transcript") != NULL) ||
+	     (strstr(subfeature.name, "gene_segment") != NULL) )
 	    first_exon = true;
 	
 	// Generate introns between exons
@@ -256,7 +266,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	//}
     }
-    fclose(gene_stream);
+    // fclose(gene_stream);
 }
 
 
@@ -529,6 +539,25 @@ void    gff_plot_subfeature(FILE *stream, gff_feature_t *gene,
     while ( c++ < 78 )
 	putc(line_ch, stream);
     putc('\n', stream);
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Determine whether a string is a valid number
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-04-24  Jason Bacon Begin
+ ***************************************************************************/
+
+int     numeric_string(const char *string)
+
+{
+    char    *end;
+    
+    strtol(string, &end, 10);
+    return *end == '\0';
 }
 
 
