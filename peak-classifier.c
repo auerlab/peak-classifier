@@ -136,7 +136,7 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     gff_skip_header(gff_stream);
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
-	feature = GFF_FEATURE(&gff_feature);
+	feature = GFF_NAME(&gff_feature);
 	if ( strcmp(feature, "###") == 0 )
 	    fputs("###\n", bed_stream);
 	else if ( strstr(feature, "gene") != NULL )
@@ -144,18 +144,13 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 	    // Write out upstream regions for likely regulatory elements
 	    strand = GFF_STRAND(&gff_feature);
 	    gff_to_bed(&bed_feature, &gff_feature);
+	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	    
 	    if ( *strand == '+' )
-	    {
 		generate_upstream_features(bed_stream, &gff_feature, &plist);
-		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
-	    }
 	    gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
 	    if ( *strand == '-' )
-	    {
-		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 		generate_upstream_features(bed_stream, &gff_feature, &plist);
-	    }
 	    fputs("###\n", bed_stream);
 	}
 	else if ( strcmp(feature, "chromosome") != 0 )
@@ -187,7 +182,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     bed_feature_t   bed_feature;
     bool            first_exon = true,
 		    exon,
-		    utr5;
+		    utr;
     uint64_t        intron_start,
 		    intron_end;
     char            *feature,
@@ -198,7 +193,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 
     bed_set_fields(&bed_feature, 4);
     
-    snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s.bed",
+    snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s-raw.bed",
 	    GFF_SEQUENCE(gene_feature),
 	    GFF_START_POS_STR(gene_feature), GFF_END_POS_STR(gene_feature));
     mkdir("Genes", 0755);
@@ -214,17 +209,20 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     //printf("Gene: %" PRIu64 ", %" PRIu64 "\n",
     //        gene_feature->start_pos, gene_feature->end_pos);
     while ( (gff_read_feature(gff_stream, &subfeature) == BIO_READ_OK) &&
-	    (strcmp(subfeature.feature, "###") != 0) )
+	    (strcmp(subfeature.name, "###") != 0) )
     {
 	// Debug
 	gff_to_bed(&bed_feature, &subfeature);
 	bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
 	
-	feature = GFF_FEATURE(&subfeature);
+	feature = GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
-	utr5 = (strcmp(feature, "five_prime_UTR") == 0);
+	utr = (strstr(feature, "UTR") != NULL);
 	strand = GFF_STRAND(&subfeature);
-	//gff_plot_subfeature(stdout, gene_feature, &subfeature);
+
+	// mRNA or lnc_RNA mark the start of a new set of exons
+	if (strstr(subfeature.name, "RNA") != NULL)
+	    first_exon = true;
 	
 	// Generate introns between exons
 	if ( exon )
@@ -251,11 +249,12 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    intron_start = GFF_END_POS(&subfeature);
 	    first_exon = false;
 	}
-	if ( exon || utr5 )
-	{
+	
+	//if ( exon || utr )
+	//{
 	    gff_to_bed(&bed_feature, &subfeature);
 	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
-	}
+	//}
     }
     fclose(gene_stream);
 }
@@ -288,7 +287,7 @@ void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
      */
     bed_set_end_pos(bed_feature, GFF_END_POS(gff_feature));
     snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
-	     strand, GFF_FEATURE(gff_feature));
+	     strand, GFF_NAME(gff_feature));
     bed_set_name(bed_feature, name);
 }
 
@@ -341,7 +340,7 @@ int     classify(FILE *peak_stream, FILE *gff_stream)
 	 *  Inject possible promoter regions in ahead of "gene" features
 	 *  in the GFF
 	 */
-	if ( strcmp(GFF_FEATURE(&gff_feature), "gene") == 0 )
+	if ( strcmp(GFF_NAME(&gff_feature), "gene") == 0 )
 	{
 	}
 	
@@ -350,7 +349,7 @@ int     classify(FILE *peak_stream, FILE *gff_stream)
 	 */
 	if ( dist == 0 )
 	{
-	    feature = GFF_FEATURE(&gff_feature);
+	    feature = GFF_NAME(&gff_feature);
 	    if ( (strcmp(feature, "five_prime_UTR") == 0) ||
 		 (strcmp(feature, "lnc_RNA") == 0) ||
 		 (strcmp(feature, "miRNA") == 0) ||
@@ -420,7 +419,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 	    GFF_START_POS(&gff_promoter), GFF_END_POS(&gff_promoter));
     if ( bed_gff_cmp(bed_feature, &gff_promoter, &overlap) == 0 )
     {
-	GFF_SET_FEATURE(&gff_promoter, promoter_name);
+	GFF_SET_NAME(&gff_promoter, promoter_name);
 	snprintf(promoter_name, GFF_FEATURE_MAX_CHARS,
 		"promoter%" PRIu64, upstream_dist);
 	puts("======");
