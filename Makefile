@@ -88,8 +88,6 @@ RANLIB      ?= ranlib
 
 INCLUDES    += -I${LOCALBASE}/include
 CFLAGS      += ${INCLUDES}
-CXXFLAGS    += ${INCLUDES}
-FFLAGS      += ${INCLUDES}
 LDFLAGS     += -L${LOCALBASE}/lib -lbiolibc
 
 ############################################################################

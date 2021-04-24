@@ -1,3 +1,6 @@
+junk.o: junk.c
+	${CC} -c ${CFLAGS} junk.c
+
 peak-classifier.o: peak-classifier.c ../local/include/biostring.h \
   ../local/include/biolibc.h ../local/include/bedio.h \
   ../local/include/gffio.h ../local/include/plist.h peak-classifier.h \

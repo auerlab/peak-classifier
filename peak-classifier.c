@@ -193,7 +193,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		    *strand,
 		    name[BED_NAME_MAX_CHARS + 1];
     // FILE            *gene_stream;
-    char            gene_filename[PATH_MAX + 1];
+    // char            gene_filename[PATH_MAX + 1];
 
     bed_set_fields(&bed_feature, 4);
     
@@ -413,7 +413,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 {
     uint64_t        promoter_start;
     gff_feature_t   gff_promoter;
-    char            promoter_name[GFF_FEATURE_MAX_CHARS + 1];
+    char            promoter_name[GFF_NAME_MAX_CHARS + 1];
     bio_overlap_t   overlap;
     
     /* Build a fake GFF feature to represent the upstream region */
@@ -430,7 +430,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
     if ( bed_gff_cmp(bed_feature, &gff_promoter, &overlap) == 0 )
     {
 	GFF_SET_NAME(&gff_promoter, promoter_name);
-	snprintf(promoter_name, GFF_FEATURE_MAX_CHARS,
+	snprintf(promoter_name, GFF_NAME_MAX_CHARS,
 		"promoter%" PRIu64, upstream_dist);
 	puts("======");
 	bed_write_feature(stdout, bed_feature, BED_FIELD_ALL);
