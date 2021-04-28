@@ -79,7 +79,7 @@ int     main(int argc,char *argv[])
     {
 	status = EX_OK;
 	//puts("Sorting...");
-	//system("sort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+	//system("gsort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
 	//classify(peak_stream, feature_stream);
     }
     else
@@ -130,7 +130,8 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     //    printf("%" PRIu64 "\n", PLIST_POSITIONS(&plist, c));
 
     // Write all of the first 4 fields to the feature file
-    bed_set_fields(&bed_feature, 4);
+    bed_set_fields(&bed_feature, 6);
+    bed_set_score(&bed_feature, 0);
     
     puts("Filtering...");
     gff_skip_header(gff_stream);
@@ -195,7 +196,13 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     // FILE            *gene_stream;
     // char            gene_filename[PATH_MAX + 1];
 
-    bed_set_fields(&bed_feature, 4);
+    bed_set_fields(&bed_feature, 6);
+    strand = GFF_STRAND(gene_feature);
+    if ( bed_set_strand(&bed_feature, *strand) != BIO_DATA_OK )
+    {
+	fputs("gff_process_subfeatures().\n", stderr);
+	exit(EX_DATAERR);
+    }
     
     /*
     snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s-raw.bed",
@@ -226,7 +233,6 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	feature = GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 	utr = (strstr(feature, "UTR") != NULL);
-	strand = GFF_STRAND(&subfeature);
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
 	if ( (strstr(subfeature.name, "RNA") != NULL) ||
@@ -251,7 +257,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		 *  GFF is the same
 		 */
 		bed_set_end_pos(&bed_feature, intron_end);
-		snprintf(name, BED_NAME_MAX_CHARS, "%sintron", strand);
+		snprintf(name, BED_NAME_MAX_CHARS, "intron");
 		bed_set_name(&bed_feature, name);
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	    }
@@ -296,9 +302,14 @@ void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
      *  GFF is the same
      */
     bed_set_end_pos(bed_feature, GFF_END_POS(gff_feature));
-    snprintf(name, BED_NAME_MAX_CHARS, "%s%s",
-	     strand, GFF_NAME(gff_feature));
+    snprintf(name, BED_NAME_MAX_CHARS, "%s", GFF_NAME(gff_feature));
     bed_set_name(bed_feature, name);
+    bed_set_score(bed_feature, 0);  // FIXME: Take as arg?
+    if ( bed_set_strand(bed_feature, *strand) != BIO_DATA_OK )
+    {
+	fputs("gff_to_bed().\n", stderr);
+	exit(EX_DATAERR);
+    }
 }
 
 
@@ -462,7 +473,8 @@ void    generate_upstream_features(FILE *feature_stream,
 
     for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
     {
-	bed_set_fields(&bed_feature[c], 4);
+	bed_set_fields(&bed_feature[c], 6);
+	bed_set_strand(&bed_feature[c], *strand);
 	bed_set_chromosome(&bed_feature[c], GFF_SEQUENCE(gff_feature));
 	/*
 	 *  BED start is 0-based and inclusive
@@ -489,8 +501,8 @@ void    generate_upstream_features(FILE *feature_stream,
 			    PLIST_POSITIONS(plist, c + 1));
 	}
 	
-	snprintf(name, BED_NAME_MAX_CHARS, "%supstream%" PRIu64,
-		 strand, PLIST_POSITIONS(plist, c + 1));
+	snprintf(name, BED_NAME_MAX_CHARS, "upstream%" PRIu64,
+		 PLIST_POSITIONS(plist, c + 1));
 	bed_set_name(&bed_feature[c], name);
     }
     
