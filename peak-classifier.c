@@ -26,12 +26,15 @@ int     main(int argc,char *argv[])
 
 {
     int     c,
+	    ch,
 	    status;
     FILE    *peak_stream,
-	    *gff_stream;
+	    *gff_stream,
+	    *intersect_pipe;
 	    // Default, override with --upstream-boundaries
     char    *upstream_boundaries = "1000,10000,100000",
-	    *p;
+	    *p,
+	    cmd[CMD_MAX + 1];
     
     if ( argc < 3 )
 	usage(argv);
@@ -77,9 +80,25 @@ int     main(int argc,char *argv[])
 
     if ( (status = filter_gff(gff_stream, upstream_boundaries)) == EX_OK )
     {
-	status = EX_OK;
-	//puts("Sorting...");
-	//system("gsort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+	puts("Sorting...");
+	system("gsort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+    
+	puts("Finding intersects...");
+	system("printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n' > overlaps.tsv");
+	snprintf(cmd, CMD_MAX,
+		 "bedtools intersect -a - -b gff-sorted.bed -wao"
+		 "| awk '{ printf(\"%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\n\", "
+		 "$1, $2, $3, $7, $8, $9, $11, $12); }' "
+		 ">> overlaps.tsv");
+	if ( (intersect_pipe = popen(cmd, "w")) == NULL )
+	{
+	    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
+		    argv[0]);
+	    return EX_CANTCREAT;
+	}
+	while ( (ch = getc(peak_stream)) != EOF )
+	    putc(ch, intersect_pipe);
+	pclose(intersect_pipe);
 	//classify(peak_stream, feature_stream);
     }
     else
@@ -106,10 +125,10 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 
 {
     FILE            *bed_stream;
-    bed_feature_t   bed_feature;
-    gff_feature_t   gff_feature;
+    bed_feature_t   bed_feature = BED_INIT;
+    gff_feature_t   gff_feature = GFF_INIT;
     char            *feature,
-		    *strand;
+		    strand;
     plist_t         plist = PLIST_INIT;
     //size_t          c;
     
@@ -150,10 +169,10 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 		gff_to_bed(&bed_feature, &gff_feature);
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 		
-		if ( *strand == '+' )
+		if ( strand == '+' )
 		    generate_upstream_features(bed_stream, &gff_feature, &plist);
 		gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
-		if ( *strand == '-' )
+		if ( strand == '-' )
 		    generate_upstream_features(bed_stream, &gff_feature, &plist);
 		fputs("###\n", bed_stream);
 	    }
@@ -183,22 +202,22 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 				gff_feature_t *gene_feature)
 
 {
-    gff_feature_t   subfeature;
-    bed_feature_t   bed_feature;
+    gff_feature_t   subfeature = GFF_INIT;
+    bed_feature_t   bed_feature = BED_INIT;
     bool            first_exon = true,
 		    exon,
 		    utr;
     uint64_t        intron_start,
 		    intron_end;
     char            *feature,
-		    *strand,
+		    strand,
 		    name[BED_NAME_MAX_CHARS + 1];
     // FILE            *gene_stream;
     // char            gene_filename[PATH_MAX + 1];
 
     bed_set_fields(&bed_feature, 6);
     strand = GFF_STRAND(gene_feature);
-    if ( bed_set_strand(&bed_feature, *strand) != BIO_DATA_OK )
+    if ( bed_set_strand(&bed_feature, strand) != BIO_DATA_OK )
     {
 	fputs("gff_process_subfeatures().\n", stderr);
 	exit(EX_DATAERR);
@@ -289,7 +308,7 @@ void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
 
 {
     char    name[BED_NAME_MAX_CHARS + 1],
-	    *strand = GFF_STRAND(gff_feature);
+	    strand = GFF_STRAND(gff_feature);
     
     bed_set_chromosome(bed_feature, GFF_SEQUENCE(gff_feature));
     /*
@@ -305,7 +324,7 @@ void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
     snprintf(name, BED_NAME_MAX_CHARS, "%s", GFF_NAME(gff_feature));
     bed_set_name(bed_feature, name);
     bed_set_score(bed_feature, 0);  // FIXME: Take as arg?
-    if ( bed_set_strand(bed_feature, *strand) != BIO_DATA_OK )
+    if ( bed_set_strand(bed_feature, strand) != BIO_DATA_OK )
     {
 	fputs("gff_to_bed().\n", stderr);
 	exit(EX_DATAERR);
@@ -330,8 +349,8 @@ int     classify(FILE *peak_stream, FILE *gff_stream)
 		    peak_center;
     char            last_chrom[BIO_CHROMOSOME_MAX_CHARS + 1] = "",
 		    *feature;
-    bed_feature_t   bed_feature;
-    gff_feature_t   gff_feature;
+    bed_feature_t   bed_feature = BED_INIT;
+    gff_feature_t   gff_feature = GFF_INIT;
     int             dist,
 		    gff_status;
     unsigned long   total_bed_features = 0,
@@ -423,7 +442,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 
 {
     uint64_t        promoter_start;
-    gff_feature_t   gff_promoter;
+    gff_feature_t   gff_promoter = GFF_INIT;
     char            promoter_name[GFF_NAME_MAX_CHARS + 1];
     bio_overlap_t   overlap;
     
@@ -465,7 +484,7 @@ void    generate_upstream_features(FILE *feature_stream,
 
 {
     bed_feature_t   bed_feature[MAX_UPSTREAM_BOUNDARIES];
-    char            *strand,
+    char            strand,
 		    name[BED_NAME_MAX_CHARS + 1];
     int             c;
     
@@ -474,7 +493,7 @@ void    generate_upstream_features(FILE *feature_stream,
     for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
     {
 	bed_set_fields(&bed_feature[c], 6);
-	bed_set_strand(&bed_feature[c], *strand);
+	bed_set_strand(&bed_feature[c], strand);
 	bed_set_chromosome(&bed_feature[c], GFF_SEQUENCE(gff_feature));
 	/*
 	 *  BED start is 0-based and inclusive
@@ -482,7 +501,7 @@ void    generate_upstream_features(FILE *feature_stream,
 	 *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
 	 *  GFF is the same
 	 */
-	if ( *strand == '+' )
+	if ( strand == '+' )
 	{
 	    bed_set_start_pos(&bed_feature[c],
 			      GFF_START_POS(gff_feature) - 
@@ -506,7 +525,7 @@ void    generate_upstream_features(FILE *feature_stream,
 	bed_set_name(&bed_feature[c], name);
     }
     
-    if ( *strand == '-' )
+    if ( strand == '-' )
     {
 	for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
 	    bed_write_feature(feature_stream, &bed_feature[c], BED_FIELD_ALL);
@@ -542,7 +561,7 @@ void    gff_plot_subfeature(FILE *stream, gff_feature_t *gene,
 	    subfeature.start_pos, subfeature->end_pos);*/
     start = (subfeature->start_pos - gene->start_pos) * 78 / gene_len;
     end = (subfeature->end_pos - gene->start_pos) * 78 / gene_len + 1;
-    line_ch = *subfeature->strand == '+'? '>' : '<';
+    line_ch = subfeature->strand == '+' ? '>' : '<';
     //printf("%" PRIu64 ", %" PRIu64 "\n", start, end);
     for (c = 0; c < start; ++c)
 	putc(line_ch, stream);
