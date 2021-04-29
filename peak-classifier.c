@@ -81,6 +81,7 @@ int     main(int argc,char *argv[])
     if ( (status = filter_gff(gff_stream, upstream_boundaries)) == EX_OK )
     {
 	puts("Sorting...");
+	// GNU sort is much faster, mainly because it's parallel
 	system("gsort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
     
 	puts("Finding intersects...");
@@ -90,6 +91,9 @@ int     main(int argc,char *argv[])
 		 "| awk '{ printf(\"%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\n\", "
 		 "$1, $2, $3, $7, $8, $9, $11, $12); }' "
 		 ">> overlaps.tsv");
+
+	// Alternative to bedtools intersect:
+	// classify(peak_stream, feature_stream);
 	if ( (intersect_pipe = popen(cmd, "w")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
@@ -99,7 +103,6 @@ int     main(int argc,char *argv[])
 	while ( (ch = getc(peak_stream)) != EOF )
 	    putc(ch, intersect_pipe);
 	pclose(intersect_pipe);
-	//classify(peak_stream, feature_stream);
     }
     else
 	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
@@ -130,7 +133,6 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     char            *feature,
 		    strand;
     plist_t         plist = PLIST_INIT;
-    //size_t          c;
     
     if ( (bed_stream = fopen("gff-filtered.bed", "w")) == NULL )
     {
@@ -140,13 +142,10 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     }
     fprintf(bed_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
     
-    //fprintf(stderr, "Parsing %s\n", upstream_boundaries);
     plist_from_csv(&plist, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
     // Upstream features are 1 to first pos, first + 1 to second, etc.
     plist_add_position(&plist, 0);
     plist_sort(&plist, PLIST_ASCENDING);
-    //for (c = 0; c < PLIST_COUNT(&plist); ++c)
-    //    printf("%" PRIu64 "\n", PLIST_POSITIONS(&plist, c));
 
     // Write all of the first 4 fields to the feature file
     bed_set_fields(&bed_feature, 6);
@@ -157,7 +156,7 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( numeric_string(GFF_SEQUENCE(&gff_feature)) )
+	if ( str_isnum(GFF_SEQUENCE(&gff_feature)) )
 	{
 	    feature = GFF_NAME(&gff_feature);
 	    if ( strcmp(feature, "###") == 0 )
@@ -212,8 +211,6 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     char            *feature,
 		    strand,
 		    name[BED_NAME_MAX_CHARS + 1];
-    // FILE            *gene_stream;
-    // char            gene_filename[PATH_MAX + 1];
 
     bed_set_fields(&bed_feature, 6);
     strand = GFF_STRAND(gene_feature);
@@ -223,32 +220,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	exit(EX_DATAERR);
     }
     
-    /*
-    snprintf(gene_filename, PATH_MAX, "Genes/%s-%s-%s-raw.bed",
-	    GFF_SEQUENCE(gene_feature),
-	    GFF_START_POS_STR(gene_feature), GFF_END_POS_STR(gene_feature));
-    mkdir("Genes", 0755);
-    if ( (gene_stream = fopen(gene_filename, "w")) == NULL )
-    {
-	fprintf(stderr, "gff_process_subfeature(): Cannot open %s: %s\n",
-		gene_filename, strerror(errno));
-	exit(EX_CANTCREAT);
-    }
-    gff_to_bed(&bed_feature, gene_feature);
-    bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
-    */
-    
-    //printf("Gene: %" PRIu64 ", %" PRIu64 "\n",
-    //        gene_feature->start_pos, gene_feature->end_pos);
     while ( (gff_read_feature(gff_stream, &subfeature) == BIO_READ_OK) &&
 	    (strcmp(subfeature.name, "###") != 0) )
     {
-	// Debug
-	/*
-	gff_to_bed(&bed_feature, &subfeature);
-	bed_write_feature(gene_stream, &bed_feature, BED_FIELD_ALL);
-	*/
-	
 	feature = GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 	utr = (strstr(feature, "UTR") != NULL);
@@ -285,13 +259,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    first_exon = false;
 	}
 	
-	//if ( exon || utr )
-	//{
-	    gff_to_bed(&bed_feature, &subfeature);
-	    bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
-	//}
+	gff_to_bed(&bed_feature, &subfeature);
+	bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
     }
-    // fclose(gene_stream);
 }
 
 
@@ -336,6 +306,9 @@ void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
  *  Description:
  *      Read through BED and GFF files, classifying each peak in the BED
  *      file according to overlapping features in the GFF.
+ *      This function is incomplete as this task is being outsourced to
+ *      bedtools intersect for now. Should needs arise that bedtools cannot
+ *      meet, development will resume.
  *
  *  History: 
  *  Date        Name        Modification
@@ -540,41 +513,6 @@ void    generate_upstream_features(FILE *feature_stream,
 
 /***************************************************************************
  *  Description:
- *      Plot exons in the given gene
- *
- *  History: 
- *  Date        Name        Modification
- *  2021-04-18  Jason Bacon Begin
- ***************************************************************************/
-
-void    gff_plot_subfeature(FILE *stream, gff_feature_t *gene,
-			    gff_feature_t *subfeature)
-
-{
-    uint64_t        gene_len = gene->end_pos - gene->start_pos,
-		    start,
-		    end;
-    int             line_ch,
-		    c;
-    
-    /*printf("Exon: %" PRIu64 ", %" PRIu64 "\n",
-	    subfeature.start_pos, subfeature->end_pos);*/
-    start = (subfeature->start_pos - gene->start_pos) * 78 / gene_len;
-    end = (subfeature->end_pos - gene->start_pos) * 78 / gene_len + 1;
-    line_ch = subfeature->strand == '+' ? '>' : '<';
-    //printf("%" PRIu64 ", %" PRIu64 "\n", start, end);
-    for (c = 0; c < start; ++c)
-	putc(line_ch, stream);
-    while ( c++ < end )
-	putc('E', stream);
-    while ( c++ < 78 )
-	putc(line_ch, stream);
-    putc('\n', stream);
-}
-
-
-/***************************************************************************
- *  Description:
  *      Determine whether a string is a valid number
  *
  *  History: 
@@ -582,7 +520,7 @@ void    gff_plot_subfeature(FILE *stream, gff_feature_t *gene,
  *  2021-04-24  Jason Bacon Begin
  ***************************************************************************/
 
-int     numeric_string(const char *string)
+int     str_isnum(const char *string)
 
 {
     char    *end;
