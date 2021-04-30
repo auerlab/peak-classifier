@@ -34,9 +34,12 @@ int     main(int argc,char *argv[])
 	    // Default, override with --upstream-boundaries
     char    *upstream_boundaries = "1000,10000,100000",
 	    *p,
-	    cmd[CMD_MAX + 1];
+	    cmd[CMD_MAX + 1],
+	    *redirect_overwrite,
+	    *redirect_append,
+	    *overlaps_filename;
     
-    if ( argc < 3 )
+    if ( argc < 4 )
 	usage(argv);
     
     /* Process flags */
@@ -78,19 +81,37 @@ int     main(int argc,char *argv[])
 	    exit(EX_NOINPUT);
 	}
 
-    if ( (status = filter_gff(gff_stream, upstream_boundaries)) == EX_OK )
+    if ( strcmp(argv[++c], "-") == 0 )
     {
-	puts("Sorting...");
-	// GNU sort is much faster, mainly because it's parallel
-	system("gsort -n -k 1 -k 2 -k 3 gff-filtered.bed > gff-sorted.bed");
+	overlaps_filename = "";
+	redirect_overwrite = "";
+	redirect_append = "";
+    }
+    else
+    {
+	overlaps_filename = argv[c];
+	redirect_overwrite = " > ";
+	redirect_append = " >> ";
+    }
+
+    if ( (status = gff_augment(gff_stream, upstream_boundaries)) == EX_OK )
+    {
+	fputs("Sorting...\n", stderr);
+	// GNU sort is much faster and can use threads
+	system("grep -v '^#' peak-classifier-gff-filtered.bed | "
+	"gsort -n -k 1 -k 2 -k 3 > peak-classifier-gff-sorted.bed");
     
-	puts("Finding intersects...");
-	system("printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n' > overlaps.tsv");
+	fputs("Finding intersects...\n", stderr);
 	snprintf(cmd, CMD_MAX,
-		 "bedtools intersect -a - -b gff-sorted.bed -wao"
+		"printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
+		redirect_overwrite, overlaps_filename);
+	system(cmd);
+	
+	snprintf(cmd, CMD_MAX,
+		 "bedtools intersect -a - -b peak-classifier-gff-sorted.bed -wao"
 		 "| awk '{ printf(\"%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\t%%s\\n\", "
 		 "$1, $2, $3, $7, $8, $9, $11, $12); }' "
-		 ">> overlaps.tsv");
+		 "%s%s", redirect_append, overlaps_filename);
 
 	// Alternative to bedtools intersect:
 	// classify(peak_stream, feature_stream);
@@ -124,7 +145,7 @@ int     main(int argc,char *argv[])
  *  2021-04-15  Jason Bacon Begin
  ***************************************************************************/
 
-int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
+int     gff_augment(FILE *gff_stream, const char *upstream_boundaries)
 
 {
     FILE            *bed_stream;
@@ -134,7 +155,7 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
 		    strand;
     plist_t         plist = PLIST_INIT;
     
-    if ( (bed_stream = fopen("gff-filtered.bed", "w")) == NULL )
+    if ( (bed_stream = fopen("peak-classifier-gff-filtered.bed", "w")) == NULL )
     {
 	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
 		strerror(errno));
@@ -151,12 +172,12 @@ int     filter_gff(FILE *gff_stream, const char *upstream_boundaries)
     bed_set_fields(&bed_feature, 6);
     bed_set_score(&bed_feature, 0);
     
-    puts("Filtering...");
+    fputs("Filtering...\n", stderr);
     gff_skip_header(gff_stream);
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( str_isnum(GFF_SEQUENCE(&gff_feature)) )
+	if ( strisnum(GFF_SEQUENCE(&gff_feature)) )
 	{
 	    feature = GFF_NAME(&gff_feature);
 	    if ( strcmp(feature, "###") == 0 )
@@ -267,43 +288,6 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 
 /***************************************************************************
  *  Description:
- *      Copy GFF fields to a BED structure
- *
- *  History: 
- *  Date        Name        Modification
- *  2021-04-19  Jason Bacon Begin
- ***************************************************************************/
-
-void    gff_to_bed(bed_feature_t *bed_feature, gff_feature_t *gff_feature)
-
-{
-    char    name[BED_NAME_MAX_CHARS + 1],
-	    strand = GFF_STRAND(gff_feature);
-    
-    bed_set_chromosome(bed_feature, GFF_SEQUENCE(gff_feature));
-    /*
-     *  BED start is 0-based and inclusive
-     *  GFF is 1-based and inclusive
-     */
-    bed_set_start_pos(bed_feature, GFF_START_POS(gff_feature) - 1);
-    /*
-     *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
-     *  GFF is the same
-     */
-    bed_set_end_pos(bed_feature, GFF_END_POS(gff_feature));
-    snprintf(name, BED_NAME_MAX_CHARS, "%s", GFF_NAME(gff_feature));
-    bed_set_name(bed_feature, name);
-    bed_set_score(bed_feature, 0);  // FIXME: Take as arg?
-    if ( bed_set_strand(bed_feature, strand) != BIO_DATA_OK )
-    {
-	fputs("gff_to_bed().\n", stderr);
-	exit(EX_DATAERR);
-    }
-}
-
-
-/***************************************************************************
- *  Description:
  *      Read through BED and GFF files, classifying each peak in the BED
  *      file according to overlapping features in the GFF.
  *      This function is incomplete as this task is being outsourced to
@@ -369,7 +353,7 @@ int     classify(FILE *peak_stream, FILE *gff_stream)
 		 (strcmp(feature, "ncRNA") == 0) ||
 		 (strcmp(feature, "exon") == 0) )
 	    {
-		puts("===");
+		fputs("===\n", stderr);
 		bed_write_feature(stdout, &bed_feature, BED_FIELD_ALL);
 		gff_write_feature(stdout, &gff_feature, BED_FIELD_ALL);
 		bio_print_overlap(&overlap, "peak", feature);
@@ -423,7 +407,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
     promoter_start = GFF_START_POS(gff_feature) - upstream_dist;
     GFF_SET_START_POS(&gff_promoter, promoter_start);
     GFF_SET_END_POS(&gff_promoter, GFF_START_POS(gff_feature) - 1);
-    puts("======");
+    fputs("======\n", stderr);
     printf("Peak at: %" PRIu64 " to %" PRIu64 "\n",
 	    BED_START_POS(bed_feature), BED_END_POS(bed_feature));
     printf("Gene at: %" PRIu64 " to %" PRIu64 "\n",
@@ -435,7 +419,7 @@ void    check_promoter(bed_feature_t *bed_feature, gff_feature_t *gff_feature,
 	GFF_SET_NAME(&gff_promoter, promoter_name);
 	snprintf(promoter_name, GFF_NAME_MAX_CHARS,
 		"promoter%" PRIu64, upstream_dist);
-	puts("======");
+	fputs("======\n", stderr);
 	bed_write_feature(stdout, bed_feature, BED_FIELD_ALL);
 	gff_write_feature(stdout, &gff_promoter, BED_FIELD_ALL);
     }
@@ -511,28 +495,11 @@ void    generate_upstream_features(FILE *feature_stream,
 }
 
 
-/***************************************************************************
- *  Description:
- *      Determine whether a string is a valid number
- *
- *  History: 
- *  Date        Name        Modification
- *  2021-04-24  Jason Bacon Begin
- ***************************************************************************/
-
-int     str_isnum(const char *string)
-
-{
-    char    *end;
-    
-    strtol(string, &end, 10);
-    return *end == '\0';
-}
-
-
 void    usage(char *argv[])
 
 {
-    fprintf(stderr, "Usage: %s [--upstream-boundaries pos[,pos ...]] BED-file GFF-file\n", argv[0]);
+    fprintf(stderr,
+	    "Usage: %s [--upstream-boundaries pos[,pos ...]] "
+	    "peaks.bed features.gff overlaps.tsv\n", argv[0]);
     exit(EX_USAGE);
 }
