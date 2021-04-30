@@ -37,7 +37,8 @@ int     main(int argc,char *argv[])
 	    cmd[CMD_MAX + 1],
 	    *redirect_overwrite,
 	    *redirect_append,
-	    *overlaps_filename;
+	    *overlaps_filename,
+	    *sort;
     
     if ( argc < 4 )
 	usage(argv);
@@ -96,10 +97,15 @@ int     main(int argc,char *argv[])
 
     if ( (status = gff_augment(gff_stream, upstream_boundaries)) == EX_OK )
     {
-	fputs("Sorting...\n", stderr);
 	// GNU sort is much faster and can use threads
-	system("grep -v '^#' pc-gff-augmented.bed | "
-	"gsort -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed");
+	if ( system("which gsort") == 0 )
+	    sort = "gsort";
+	else
+	    sort = "sort";
+	snprintf(cmd, CMD_MAX, "grep -v '^#' pc-gff-augmented.bed | "
+		"%s -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed", sort);
+	fprintf(stderr, "Sorting with %s...\n", sort);
+	system(cmd);
     
 	fputs("Finding intersects...\n", stderr);
 	snprintf(cmd, CMD_MAX,
