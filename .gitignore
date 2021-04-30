@@ -54,3 +54,10 @@ dkms.conf
 
 # Backup files
 .*.bak
+
+# Data
+*.bed
+*.gff*
+*.tsv
+*.png
+*.xz
