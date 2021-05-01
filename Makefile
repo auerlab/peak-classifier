@@ -44,14 +44,14 @@
 # Installed targets
 
 BIN1    = peak-classifier
-BIN2    = overlap-filter
+BIN2    = filter-overlaps
 MAN     = peak-classifier.1
 
 ############################################################################
 # List object files that comprise BIN.
 
 OBJS1   = peak-classifier.o
-OBJS2   = overlap-filter.o
+OBJS2   = filter-overlaps.o
 
 ############################################################################
 # Compile, link, and install options

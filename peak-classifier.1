@@ -9,7 +9,8 @@ a GFF
 .PP
 .nf 
 .na 
-peak-classifier BED-file GFF-file
+peak-classifier [--upstream-boundaries pos[,pos...]] \
+peaks.bed features.gff overlaps.tsv
 .ad
 .fi
 
@@ -26,8 +27,44 @@ Features include all those explicitly named in the GFF as well as introns,
 which are computed as regions between the given exons, and promoters which
 are regions just upstream of the TSS.
 
+By default, promoter regions are generated for 1-1000 bases, 1001-10000
+bases, and 10001-100000 bases upstream from TSS.
+
+All overlaps between peaks and GFF features are reported in the output TSV
+(tab-separated values) file.  In many cases, a peak may overlap two or more
+adjacent features, in which case one line of output is generated for each
+overlap.
+
+The output file contains the location of the
+peak in the first three columns, followed by the location, name, and strand
+of the GFF feature, and finally the amount of number of bases of overlap
+between the two.  The file does not conform to any
+standard format, though the first three columns follow BED file format and
+the 4th and 5th columns use BED coordinates (0-based, end coordinate is 1
+past the last base in the feature).
+
+.nf
+.na
+#Chr    P-start P-end   F-start F-end   F-name  Strand  Overlap
+1       3119722 3120223 3043475 3133475 upstream100000  +       501
+1       3119722 3120223 3072238 3162238 upstream100000  +       501
+1       3121255 3121756 3043475 3133475 upstream100000  +       501
+1       3121255 3121756 3072238 3162238 upstream100000  +       501
+1       3167069 3167570 3162238 3171238 upstream10000   +       501
+1       3203860 3204361 -1      -1      intergenic      .       501
+1       3292373 3293369 3222979 3312979 upstream100000  +       996
+1       3292373 3293369 3276123 3741721 gene    -       996
+1       3292373 3293369 3284704 3741721 mRNA    -       996
+1       3292373 3293369 3287191 3491924 intron  -       996
+1       3297187 3297998 3222979 3312979 upstream100000  +       811
+.fi
+
+Output can be further processed by
+.B filter-overlaps
+to gather information on features of interest.
+
 .SH "SEE ALSO"
-MACS2, DESeq2
+filter-overlaps, feature-view, MACS2, DESeq2
 
 .SH BUGS
 Please report bugs to the author and send patches in unified diff format.
