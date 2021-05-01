@@ -105,30 +105,32 @@ int     main(int argc,char *argv[])
 	snprintf(cmd, CMD_MAX, "grep -v '^#' pc-gff-augmented.bed | "
 		"%s -S 1G -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed", sort);
 	fprintf(stderr, "Sorting with %s...\n", sort);
-	system(cmd);
-    
-	fputs("Finding intersects...\n", stderr);
-	snprintf(cmd, CMD_MAX,
-		"printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
-		redirect_overwrite, overlaps_filename);
-	system(cmd);
-	
-	snprintf(cmd, CMD_MAX,
-		 "bedtools intersect -a - -b pc-gff-sorted.bed -wao"
-		 "| cut -f 1,2,3,7,8,9,11,12%s%s",
-		 redirect_append, overlaps_filename);
-
-	// Alternative to bedtools intersect:
-	// classify(peak_stream, feature_stream);
-	if ( (intersect_pipe = popen(cmd, "w")) == NULL )
+	if ( (status = system(cmd)) == 0 )
 	{
-	    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
-		    argv[0]);
-	    return EX_CANTCREAT;
+	    fputs("Finding intersects...\n", stderr);
+	    snprintf(cmd, CMD_MAX,
+		    "printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
+		    redirect_overwrite, overlaps_filename);
+	    if ( (status = system(cmd)) == 0 )
+	    {
+		snprintf(cmd, CMD_MAX,
+			 "bedtools intersect -a - -b pc-gff-sorted.bed -wao"
+			 "| cut -f 1,2,3,7,8,9,11,12%s%s",
+			 redirect_append, overlaps_filename);
+	
+		// Alternative to bedtools intersect:
+		// classify(peak_stream, feature_stream);
+		if ( (intersect_pipe = popen(cmd, "w")) == NULL )
+		{
+		    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
+			    argv[0]);
+		    return EX_CANTCREAT;
+		}
+		while ( (ch = getc(peak_stream)) != EOF )
+		    putc(ch, intersect_pipe);
+		pclose(intersect_pipe);
+	    }
 	}
-	while ( (ch = getc(peak_stream)) != EOF )
-	    putc(ch, intersect_pipe);
-	pclose(intersect_pipe);
     }
     else
 	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
