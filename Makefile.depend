@@ -1,3 +1,7 @@
+overlap-filter.o: overlap-filter.c ../local/include/dsvio.h \
+  ../local/include/biolibc.h overlap-filter.h
+	${CC} -c ${CFLAGS} overlap-filter.c
+
 peak-classifier.o: peak-classifier.c ../local/include/biostring.h \
   ../local/include/biolibc.h ../local/include/bedio.h \
   ../local/include/gffio.h ../local/include/plist.h peak-classifier.h \
