@@ -160,7 +160,9 @@ realclean: clean
 install: all
 	${MKDIR} -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/man/man1
 	${INSTALL} -s -m 0555 ${BIN1} ${BIN2} ${DESTDIR}${PREFIX}/bin
-	${INSTALL} -m 0444 ${MAN} ${DESTDIR}${MANPREFIX}/man/man1
+	${INSTALL} -m 0444 ${MAN1} ${MAN2} ${DESTDIR}${MANPREFIX}/man/man1
+	${INSTALL} -m 0555 feature-view.py \
+	    ${DESTDIR}${MANPREFIX}/bin/feature-view
 
 help:
 	@printf "Usage: make [VARIABLE=value ...] all\n\n"
