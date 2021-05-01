@@ -98,7 +98,7 @@ int     main(int argc,char *argv[])
     if ( (status = gff_augment(gff_stream, upstream_boundaries)) == EX_OK )
     {
 	// GNU sort is much faster and can use threads
-	if ( system("which gsort") == 0 )
+	if ( system("which gsort > /dev/null") == 0 )
 	    sort = "gsort";
 	else
 	    sort = "sort";
@@ -113,11 +113,18 @@ int     main(int argc,char *argv[])
 		    redirect_overwrite, overlaps_filename);
 	    if ( (status = system(cmd)) == 0 )
 	    {
+		/*
+		 *  Peaks not overlapping anything else are labeled
+		 *  intergenic.  The entire peak length must overlap the
+		 *  intergenic region since none of it overlaps anything else.
+		 */
 		snprintf(cmd, CMD_MAX,
 			 "bedtools intersect -a - -b pc-gff-sorted.bed -wao"
-			 "| cut -f 1,2,3,7,8,9,11,12%s%s",
+			 "| cut -f 1,2,3,7,8,9,11,12"
+			 "| awk 'BEGIN { OFS=\"\\t\" } "
+			 "{ if ( $5 == -1 ) $6 = \"intergenic\"; $8 = $3 - $2; print $0; }'"
+			 "%s%s",
 			 redirect_append, overlaps_filename);
-	
 		// Alternative to bedtools intersect:
 		// classify(peak_stream, feature_stream);
 		if ( (intersect_pipe = popen(cmd, "w")) == NULL )

@@ -20,20 +20,23 @@ int     main(int argc,char *argv[])
 
 {
     char    *overlaps_file,
+	    *output_file,
 	    **features;
 
     switch(argc)
     {
 	case    1:
 	case    2:
+	case    3:
 	    usage(argv);
 
 	default:
 	    overlaps_file = argv[1];
-	    features = argv + 2;
+	    output_file = argv[2];
+	    features = argv + 3;
 	    break;
     }
-    return filter_overlaps(overlaps_file, features);
+    return filter_overlaps(overlaps_file, output_file, features);
 }
 
 
@@ -46,16 +49,21 @@ int     main(int argc,char *argv[])
  *  2021-04-30  Jason Bacon Begin
  ***************************************************************************/
 
-int     filter_overlaps(char *overlaps_file, char *features[])
+int     filter_overlaps(const char *overlaps_file, const char *output_file,
+			char *features[])
 
 {
-    FILE        *infile;
+    FILE        *infile,
+		*outfile;
     dsv_line_t  dsv_line = DSV_INIT,
-		keeper = DSV_INIT;
+		keeper = DSV_INIT,
+		last_line = DSV_INIT;
     int         delim;
     size_t      keeper_rank,
-		new_rank;
-    unsigned long   total_overlaps = 0;
+		new_rank,
+		c;
+    unsigned long   unique_peaks = 0,
+		    feature_overlaps[MAX_OVERLAP_FEATURES];
     
     if ( strcmp(overlaps_file, "-") == 0 )
 	infile = stdin;
@@ -66,15 +74,32 @@ int     filter_overlaps(char *overlaps_file, char *features[])
 	return EX_NOINPUT;
     }
     
+    if ( strcmp(output_file, "-") == 0 )
+	outfile = stdout;
+    else if ( (outfile = bio_fopen(output_file, "w")) == NULL )
+    {
+	fprintf(stderr, "filter-overlaps: Cannot open %s: %s\n",
+		overlaps_file, strerror(errno));
+	return EX_CANTCREAT;
+    }
+    
+    for (c = 0; c < MAX_OVERLAP_FEATURES; ++c)
+	feature_overlaps[c]= 0;
+    
     delim = dsv_read_line(infile, &dsv_line, "\t");
     while ( delim != EOF )
     {
+	dsv_free_line(&last_line);
+	dsv_copy_line(&last_line, &dsv_line);
 	/*
 	 *  If this is a keeper (in the features list), check subsequent
-	 *  lines with the same peak for higher ranking features.
+	 *  lines with the same peak for higher ranking features.  Input
+	 *  is sorted by peak position, so lines with the same peak should
+	 *  be contiguous.
 	 */
 	if ( (keeper_rank = feature_rank(&dsv_line, features)) != 0 )
 	{
+	    //fprintf(stderr, "%s %zu\n", DSV_FIELD(&dsv_line, 6), keeper_rank);
 	    dsv_copy_line(&keeper, &dsv_line);
 	    dsv_free_line(&dsv_line);
 	    while ( ((delim = dsv_read_line(infile, &dsv_line, "\t")) != EOF)
@@ -84,11 +109,16 @@ int     filter_overlaps(char *overlaps_file, char *features[])
 		// If new feature has a higher rank, replace the old one
 		if ( (new_rank != 0) && (new_rank < keeper_rank) )
 		{
+		    /*fprintf(stderr, "%s:%zu outranks %s:%zu.\n",
+			    DSV_FIELD(&dsv_line, 6), new_rank,
+			    DSV_FIELD(&keeper, 6), keeper_rank);*/
 		    dsv_free_line(&keeper);
 		    dsv_copy_line(&keeper, &dsv_line);
+		    keeper_rank = new_rank;
 		}
 	    }
-	    dsv_write_line(stdout, &keeper);
+	    ++feature_overlaps[keeper_rank - 1];
+	    dsv_write_line(outfile, &keeper);
 	    dsv_free_line(&keeper);
 	}
 	else
@@ -97,9 +127,16 @@ int     filter_overlaps(char *overlaps_file, char *features[])
 	    dsv_free_line(&dsv_line);
 	    delim = dsv_read_line(infile, &dsv_line, "\t");
 	}
-	++total_overlaps;   // Don't count multiple overlaps of same peak
+	if ( (delim != EOF) && !same_peak(&dsv_line, &last_line) )
+	    ++unique_peaks;
     }
     fclose(infile);
+    fclose(outfile);
+    
+    printf("Total unique peaks: %zu\n", unique_peaks);
+    for (c = 0; features[c] != NULL; ++c)
+	printf("Overlaps with %-20s: %7zu (%2zu%%)\n", features[c],
+		feature_overlaps[c], 100 * feature_overlaps[c] / unique_peaks);
     return EX_OK;
 }
 
@@ -120,7 +157,7 @@ size_t  feature_rank(dsv_line_t *line, char *features[])
     int     c;
     
     for (c = 0; features[c] != NULL; ++c)
-	if ( strstr(DSV_FIELD(line, 6), features[c]) != NULL )
+	if ( strcasecmp(DSV_FIELD(line, 6), features[c]) == 0 )
 	    return c+1;
     return 0;
 }
