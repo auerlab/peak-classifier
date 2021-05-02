@@ -45,7 +45,8 @@
 
 BIN1    = peak-classifier
 BIN2    = filter-overlaps
-MAN     = peak-classifier.1
+MAN1    = peak-classifier.1
+MAN2    = filter-overlaps.1
 
 ############################################################################
 # List object files that comprise BIN.
