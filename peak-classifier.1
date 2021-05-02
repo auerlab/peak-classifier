@@ -30,6 +30,9 @@ are regions just upstream of the TSS.
 By default, promoter regions are generated for 1-1000 bases, 1001-10000
 bases, and 10001-100000 bases upstream from TSS.
 
+After generating a BED file containing all GFF features + those generated,
+bedtools intersect is used to determine the overlaps.
+
 All overlaps between peaks and GFF features are reported in the output TSV
 (tab-separated values) file.  In many cases, a peak may overlap two or more
 adjacent features, in which case one line of output is generated for each
@@ -64,7 +67,7 @@ Output can be further processed by
 to gather information on features of interest.
 
 .SH "SEE ALSO"
-filter-overlaps, feature-view, MACS2, DESeq2
+filter-overlaps, feature-view, bedtools, MACS2, DESeq2
 
 .SH BUGS
 Please report bugs to the author and send patches in unified diff format.
