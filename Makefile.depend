@@ -1,5 +1,6 @@
 filter-overlaps.o: filter-overlaps.c ../local/include/dsvio.h \
-  ../local/include/biolibc.h filter-overlaps.h
+  ../local/include/biolibc.h ../local/include/biostring.h \
+  filter-overlaps.h
 	${CC} -c ${CFLAGS} filter-overlaps.c
 
 peak-classifier.o: peak-classifier.c ../local/include/biostring.h \

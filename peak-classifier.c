@@ -103,7 +103,8 @@ int     main(int argc,char *argv[])
 	else
 	    sort = "sort";
 	snprintf(cmd, CMD_MAX, "grep -v '^#' pc-gff-augmented.bed | "
-		"%s -S 1G -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed", sort);
+		"%s -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed\n", sort);
+	fputs(cmd, stderr);
 	fprintf(stderr, "Sorting with %s...\n", sort);
 	if ( (status = system(cmd)) == 0 )
 	{
