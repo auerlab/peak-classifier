@@ -1,0 +1,61 @@
+.TH FILTER-OVERLAPS 1
+.SH NAME    \" Section header
+.PP
+
+FILTER-OVERLAPS \- Classify peaks in a BED file according to features in
+a GFF
+
+.SH SYNOPSIS
+.PP
+.nf 
+.na 
+filter-overlaps overlaps-file.tsv output-file.tsv feature [feature ...]
+.ad
+.fi
+
+.SH "PURPOSE"
+
+.B Filter-overlaps
+filters the output of peak-classifier for GFF features indicated on the
+command-line.
+
+.SH "DESCRIPTION"
+
+Features include all those explicitly named in the GFF as well as introns,
+which are computed as regions between the given exons, promoter regions
+upstream of the TSS, and intergenic regions that do not map to known
+features.
+
+Names of features indicated on the command-line must exactly match those in
+the GFF file, or one of the generated feature types "intron", "upstream"
+followed by an upstream boundary (representing promoter regions), or
+"intergenic", for regions not covered by any explicit or generated features.
+
+Promoter regions present in the peak-classifier output depend on the
+peak-classifier command-line parameters.  By default, they include
+"upstream1000", "upstream10000", and "upstream100000".
+
+Features are prioritized in the order they are presented on the
+command-line and only one overlap is reported in the output.  For example,
+if a peak overlaps both an exon and an intron, and the command is as
+follows:
+
+.nf
+.na
+filter-overlaps overlaps.tsv filter-overlaps.tsv intro exon upstream1000
+.ad
+.fi
+
+then only the overlap with the intron will be passed to the output.
+
+.SH "SEE ALSO"
+peak-classifier, feature-view, MACS2, DESeq2
+
+.SH BUGS
+Please report bugs to the author and send patches in unified diff format.
+(man diff for more information)
+
+.SH AUTHOR
+.nf
+.na
+J. Bacon
