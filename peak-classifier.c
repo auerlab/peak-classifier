@@ -38,7 +38,8 @@ int     main(int argc,char *argv[])
 	    *redirect_overwrite,
 	    *redirect_append,
 	    *overlaps_filename,
-	    *sort;
+	    *sort,
+	    *midpoint_filter = "";
     
     if ( argc < 4 )
 	usage(argv);
@@ -57,6 +58,10 @@ int     main(int argc,char *argv[])
 		    usage(argv);
 		}
 	}
+	else if ( strcmp(argv[c], "--midpoints") == 0 )
+	    midpoint_filter = "awk 'BEGIN { OFS=\"\\t\"; } $0 !~ \"^#\" "
+		"{ s = ($2 + $3) / 2; e = s + 1; "
+		"printf(\"%u\\t%u\\t%u\\t%u\\t%u\\n\", $1, s, e, $4, $5); }' | ";
 	else
 	    usage(argv);
     }
@@ -110,7 +115,7 @@ int     main(int argc,char *argv[])
 	    sort = "sort";
 	snprintf(cmd, CMD_MAX, "grep -v '^#' pc-gff-augmented.bed | "
 		"%s -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed\n", sort);
-	fputs(cmd, stderr);
+	// fputs(cmd, stderr);
 	fprintf(stderr, "Sorting with %s...\n", sort);
 	if ( (status = system(cmd)) == 0 )
 	{
@@ -123,15 +128,16 @@ int     main(int argc,char *argv[])
 		/*
 		 *  Peaks not overlapping anything else are labeled
 		 *  upstream-beyond.  The entire peak length must overlap the
-		 *  other region since none of it overlaps anything else.
+		 *  beyond region since none of it overlaps anything else.
 		 */
 		snprintf(cmd, CMD_MAX,
-			 "bedtools intersect -a - -b pc-gff-sorted.bed -wao"
+			 "%sbedtools intersect -a - -b pc-gff-sorted.bed -wao"
 			 "| cut -f 1,2,3,7,8,9,11,12"
-			 "| awk 'BEGIN { OFS=\"\\t\" } "
+			 "| awk 'BEGIN { OFS=\"\\t\"; } "
 			 "{ if ( $5 == -1 ) $6 = \"upstream-beyond\"; $8 = $3 - $2; print $0; }'"
 			 "%s%s",
-			 redirect_append, overlaps_filename);
+			 midpoint_filter, redirect_append, overlaps_filename);
+		// puts(cmd);
 		// Alternative to bedtools intersect:
 		// classify(peak_stream, feature_stream);
 		if ( (intersect_pipe = popen(cmd, "w")) == NULL )
@@ -193,7 +199,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries)
     bed_set_fields(&bed_feature, 6);
     bed_set_score(&bed_feature, 0);
     
-    fputs("Filtering...\n", stderr);
+    fputs("Augmenting GFF3 data...\n", stderr);
     gff_skip_header(gff_stream);
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {

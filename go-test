@@ -1,0 +1,16 @@
+#!/bin/sh -e
+
+printf "1-base overlaps:\n\n"
+./peak-classifier test.bed.xz Mus_musculus.GRCm39.103.gff3.gz \
+    test-overlaps.tsv
+./filter-overlaps test-overlaps.tsv test-filtered.tsv five_prime_utr \
+    three_prime_utr intron exon upstream1000 upstream10000 upstream100000 \
+    upstream-beyond
+
+printf "\nSummits only:\n\n"
+./peak-classifier --summits test.bed.xz Mus_musculus.GRCm39.103.gff3.gz \
+    test-summit-overlaps.tsv
+./filter-overlaps test-summit-overlaps.tsv test-filtered.tsv five_prime_utr \
+    three_prime_utr intron exon upstream1000 upstream10000 upstream100000 \
+    upstream-beyond
+
