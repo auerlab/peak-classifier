@@ -29,6 +29,7 @@ int     main(int argc,char *argv[])
     int     c,
 	    ch,
 	    status;
+    double  min_peak_overlap = 1.0e-9;
     FILE    *peak_stream,
 	    *gff_stream,
 	    *intersect_pipe;
@@ -40,14 +41,14 @@ int     main(int argc,char *argv[])
 	    *redirect_append,
 	    *overlaps_filename,
 	    *sort,
-	    *midpoint_filter = "";
+	    *midpoint_filter = "",
+	    *end;
     
     if ( argc < 4 )
 	usage(argv);
     
     /* Process flags */
-    for (c = 1; (c < argc) && (memcmp(argv[c],"--",2) == 0);
-	 ++c)
+    for (c = 1; (c < argc) && (memcmp(argv[c],"--",2) == 0); ++c)
     {
 	if ( strcmp(argv[c], "--upstream-boundaries") == 0 )
 	{
@@ -58,6 +59,12 @@ int     main(int argc,char *argv[])
 		    fputs("peak-classifier: List should be comma-separated with no space.\n", stderr);
 		    usage(argv);
 		}
+	}
+	else if ( strcmp(argv[c], "--min-peak-overlap") == 0 )
+	{
+	    min_peak_overlap = strtod(argv[++c], &end);
+	    if ( *end != '\0' )
+		usage(argv);
 	}
 	else if ( strcmp(argv[c], "--midpoints") == 0 )
 	    midpoint_filter = "awk 'BEGIN { OFS=\"\\t\"; } $0 !~ \"^#\" "
@@ -132,13 +139,13 @@ int     main(int argc,char *argv[])
 		 *  beyond region since none of it overlaps anything else.
 		 */
 		snprintf(cmd, CMD_MAX,
-			 "%sbedtools intersect -a - -b pc-gff-sorted.bed -wao"
+			 "%sbedtools intersect -a - -b pc-gff-sorted.bed -f %g -wao"
 			 "| cut -f 1,2,3,7,8,9,11,12"
 			 "| awk 'BEGIN { OFS=\"\\t\"; } "
 			 "{ if ( $5 == -1 ) $6 = \"upstream-beyond\"; $8 = $3 - $2; print $0; }'"
-			 "%s%s",
-			 midpoint_filter, redirect_append, overlaps_filename);
-		// puts(cmd);
+			 "%s%s\n", midpoint_filter, min_peak_overlap,
+			 redirect_append, overlaps_filename);
+		// fputs(cmd, stderr);
 		// Alternative to bedtools intersect:
 		// classify(peak_stream, feature_stream);
 		if ( (intersect_pipe = popen(cmd, "w")) == NULL )
@@ -387,7 +394,19 @@ void    usage(char *argv[])
 
 {
     fprintf(stderr,
-	    "Usage: %s [--upstream-boundaries pos[,pos ...]] "
-	    "peaks.bed features.gff overlaps.tsv\n", argv[0]);
+	    "\nUsage: %s [--upstream-boundaries pos[,pos ...]] "
+	    "[--min-peak-overlap x.y] [--midpoints] "
+	    "peaks.bed features.gff overlaps.tsv\n\n", argv[0]);
+    fputs("Upstream boundaries are distances upstream from TSS, for which we want\n"
+	  "overlaps reported.  The default is 1000,10000,100000, which means features\n"
+	  "are generated for 1 to 1000, 1001 to 10000, and 10001 to 100000 bases\n"
+	  "upstream.  Peaks that do not overlap any of these or other features are\n"
+	  "reported as 'upstream-beyond.\n\n"
+	  "The min peak overlap must range from 1.0e-9 (the default) to 1.0\n"
+	  "This value is passed directlry to bedtools intersect -f.\n\n"
+	  "--midpoints indicates that we are only interested in which feature contains\n"
+	  "the midpoint of each peak.  This is the same as --min-peak-overlap 0.5\n"
+	  "in cases where half the peak is contained in a feature, but can also report\n"
+	  "overlaps with features too small to contain much overlap.\n\n", stderr);
     exit(EX_USAGE);
 }
