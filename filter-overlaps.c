@@ -192,7 +192,7 @@ bool    same_peak(dsv_line_t *line1, dsv_line_t *line2)
 void    usage(char *argv[])
 
 {
-    fprintf(stderr, "Usage: %s overlap-file.tsv feature [feature ...]\n", argv[0]);
-    fprintf(stderr, "Example: %s overlaps.tsv exon intron upstream\n", argv[0]);
+    fprintf(stderr, "Usage: %s overlap-file.tsv outfile-tsv feature [feature ...]\n", argv[0]);
+    fprintf(stderr, "Example: %s overlaps.tsv filtered.tsv exon intron upstream\n", argv[0]);
     exit(EX_USAGE);
 }

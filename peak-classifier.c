@@ -61,27 +61,32 @@ int     main(int argc,char *argv[])
 	    usage(argv);
     }
 
-    fprintf(stderr, "bed file = %s\n", argv[c]);
     if ( strcmp(argv[c], "-") == 0 )
 	peak_stream = stdin;
     else
+    {
+	check_extension(argv[c], ".bed");
 	if ( (peak_stream = bio_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
 	    exit(EX_NOINPUT);
 	}
+    }
     
     if ( strcmp(argv[++c], "-") == 0 )
 	gff_stream = stdin;
     else
+    {
+	check_extension(argv[c], ".gff3");
 	if ( (gff_stream = bio_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
 	    exit(EX_NOINPUT);
 	}
-
+    }
+    
     if ( strcmp(argv[++c], "-") == 0 )
     {
 	overlaps_filename = "";
@@ -91,6 +96,7 @@ int     main(int argc,char *argv[])
     else
     {
 	overlaps_filename = argv[c];
+	check_extension(overlaps_filename, ".tsv");
 	redirect_overwrite = " > ";
 	redirect_append = " >> ";
     }
@@ -116,14 +122,14 @@ int     main(int argc,char *argv[])
 	    {
 		/*
 		 *  Peaks not overlapping anything else are labeled
-		 *  intergenic.  The entire peak length must overlap the
-		 *  intergenic region since none of it overlaps anything else.
+		 *  upstream-beyond.  The entire peak length must overlap the
+		 *  other region since none of it overlaps anything else.
 		 */
 		snprintf(cmd, CMD_MAX,
 			 "bedtools intersect -a - -b pc-gff-sorted.bed -wao"
 			 "| cut -f 1,2,3,7,8,9,11,12"
 			 "| awk 'BEGIN { OFS=\"\\t\" } "
-			 "{ if ( $5 == -1 ) $6 = \"intergenic\"; $8 = $3 - $2; print $0; }'"
+			 "{ if ( $5 == -1 ) $6 = \"upstream-beyond\"; $8 = $3 - $2; print $0; }'"
 			 "%s%s",
 			 redirect_append, overlaps_filename);
 		// Alternative to bedtools intersect:
@@ -376,5 +382,52 @@ void    usage(char *argv[])
     fprintf(stderr,
 	    "Usage: %s [--upstream-boundaries pos[,pos ...]] "
 	    "peaks.bed features.gff overlaps.tsv\n", argv[0]);
+    exit(EX_USAGE);
+}
+
+
+/***************************************************************************
+ *  Description:
+ *      Verify that the filename extension on filename is either the
+ *      valid extension provided or that extension followed by a
+ *      compression extension, e.g. .gz, .bz2, .xz.
+ *
+ *  History: 
+ *  Date        Name        Modification
+ *  2021-05-04  Jason Bacon Begin
+ ***************************************************************************/
+
+void    check_extension(const char *filename, const char *valid_ext)
+
+{
+    char    *zip_exts[] = { ".gz", ".bz2", ".xz" },
+	    *ext,
+	    *compressed;
+    size_t  c;
+
+    if ( (ext = strrchr(filename, '.')) != NULL )
+    {
+	if ( strcmp(ext, valid_ext) == 0 )
+	    return;
+	for (c = 0; c < sizeof(zip_exts) / sizeof(*zip_exts); ++c)
+	{
+	    if ( strcmp(ext, zip_exts[c]) == 0 )
+	    {
+		compressed = strdup(filename);
+		// Already confirmed there's an extension, clip it
+		*strrchr(compressed, '.') = '\0';
+		if ( ((ext = strrchr(compressed, '.')) != NULL) &&
+		     (strcmp(ext, valid_ext) == 0) )
+		{
+		    free(compressed);
+		    return;
+		}
+		free(compressed);
+		break;
+	    }
+	}
+    }
+    fprintf(stderr, "Error: %s should have a %s[.%s] extension\n",
+	    filename, valid_ext, "gz|bz2|xz");
     exit(EX_USAGE);
 }
