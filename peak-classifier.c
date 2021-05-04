@@ -20,7 +20,7 @@
 #include <bedio.h>
 #include <gffio.h>
 #include <plist.h>
-#include <xtendc/file.h>
+#include <xtendc.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -72,7 +72,7 @@ int     main(int argc,char *argv[])
     else
     {
 	check_extension(argv[c], ".bed");
-	if ( (peak_stream = bio_fopen(argv[c], "r")) == NULL )
+	if ( (peak_stream = xc_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -85,7 +85,7 @@ int     main(int argc,char *argv[])
     else
     {
 	check_extension(argv[c], ".gff3");
-	if ( (gff_stream = bio_fopen(argv[c], "r")) == NULL )
+	if ( (gff_stream = xc_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -156,8 +156,8 @@ int     main(int argc,char *argv[])
     else
 	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
 		strerror(errno));
-    bio_fclose(peak_stream);
-    bio_fclose(gff_stream);
+    xc_fclose(peak_stream);
+    xc_fclose(gff_stream);
     return status;
 }
 

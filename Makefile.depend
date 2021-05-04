@@ -1,11 +1,13 @@
 filter-overlaps.o: filter-overlaps.c ../local/include/dsvio.h \
   ../local/include/biolibc.h ../local/include/biostring.h \
+  ../local/include/xtendc.h ../local/include/xtendc-protos.h \
   filter-overlaps.h
 	${CC} -c ${CFLAGS} filter-overlaps.c
 
 peak-classifier.o: peak-classifier.c ../local/include/biostring.h \
   ../local/include/biolibc.h ../local/include/bedio.h \
-  ../local/include/gffio.h ../local/include/plist.h peak-classifier.h \
-  protos.h
+  ../local/include/gffio.h ../local/include/plist.h \
+  ../local/include/xtendc.h ../local/include/xtendc-protos.h \
+  peak-classifier.h protos.h
 	${CC} -c ${CFLAGS} peak-classifier.c
 
