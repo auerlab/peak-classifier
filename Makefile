@@ -165,6 +165,9 @@ install: all
 	${INSTALL} -m 0555 feature-view.py \
 	    ${DESTDIR}${MANPREFIX}/bin/feature-view
 
+test: all
+	./test.sh
+
 help:
 	@printf "Usage: make [VARIABLE=value ...] all\n\n"
 	@printf "Some common tunable variables:\n\n"

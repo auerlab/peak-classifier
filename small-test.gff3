@@ -1,0 +1,46 @@
+##gff-version 3
+#!genome-build  GRCm39
+#!genome-version GRCm39
+#!genome-date 2020-06
+#!genome-build-accession NCBI:GCA_000001635.9
+#!genebuild-last-updated 2020-08
+1	GRCm39	chromosome	1	195154279	.	.	.	ID=chromosome:1;Alias=CM000994.3,NC_000067.7,chr1
+###
+1	tRNAscan	biological_region	3133676	3133747	34.6	-	.	external_name=Pseudo;logic_name=trnascan
+1	havana	gene	3143476	3144545	.	+	.	ID=gene:ENSMUSG00000102693;Name=4933401J01Rik;biotype=TEC;description=RIKEN cDNA 4933401J01 gene [Source:MGI Symbol%3BAcc:MGI:1918292];gene_id=ENSMUSG00000102693;logic_name=havana_mus_musculus;version=2
+1	havana	unconfirmed_transcript	3143476	3144545	.	+	.	ID=transcript:ENSMUST00000193812;Parent=gene:ENSMUSG00000102693;Name=4933401J01Rik-201;biotype=TEC;tag=basic;transcript_id=ENSMUST00000193812;transcript_support_level=NA (assigned to previous version 1);version=2
+1	havana	exon	3143476	3144545	.	+	.	Parent=transcript:ENSMUST00000193812;Name=ENSMUSE00001343744;constitutive=1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00001343744;rank=1;version=2
+###
+1	ensembl	ncRNA_gene	3172239	3172348	.	+	.	ID=gene:ENSMUSG00000064842;Name=Gm26206;biotype=snRNA;description=predicted gene%2C 26206 [Source:MGI Symbol%3BAcc:MGI:5455983];gene_id=ENSMUSG00000064842;logic_name=ncrna_mus_musculus;version=3
+1	ensembl	snRNA	3172239	3172348	.	+	.	ID=transcript:ENSMUST00000082908;Parent=gene:ENSMUSG00000064842;Name=Gm26206-201;biotype=snRNA;tag=basic;transcript_id=ENSMUST00000082908;transcript_support_level=NA (assigned to previous version 1);version=3
+1	ensembl	exon	3172239	3172348	.	+	.	Parent=transcript:ENSMUST00000082908;Name=ENSMUSE00000522066;constitutive=1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00000522066;rank=1;version=2
+###
+1	ensembl_havana	gene	3276124	3741721	.	-	.	ID=gene:ENSMUSG00000051951;Name=Xkr4;biotype=protein_coding;description=X-linked Kx blood group related 4 [Source:MGI Symbol%3BAcc:MGI:3528744];gene_id=ENSMUSG00000051951;logic_name=ensembl_havana_gene_mus_musculus;version=6
+1	havana	lnc_RNA	3276124	3286567	.	-	.	ID=transcript:ENSMUST00000162897;Parent=gene:ENSMUSG00000051951;Name=Xkr4-203;biotype=processed_transcript;transcript_id=ENSMUST00000162897;transcript_support_level=1 (assigned to previous version 1);version=2
+1	havana	exon	3276124	3277540	.	-	.	Parent=transcript:ENSMUST00000162897;Name=ENSMUSE00000866652;constitutive=0;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00000866652;rank=2;version=2
+1	havana	exon	3283832	3286567	.	-	.	Parent=transcript:ENSMUST00000162897;Name=ENSMUSE00000858910;constitutive=0;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00000858910;rank=1;version=2
+1	havana	lnc_RNA	3276746	3285855	.	-	.	ID=transcript:ENSMUST00000159265;Parent=gene:ENSMUSG00000051951;Name=Xkr4-202;biotype=processed_transcript;transcript_id=ENSMUST00000159265;transcript_support_level=1 (assigned to previous version 1);version=2
+1	havana	exon	3276746	3277540	.	-	.	Parent=transcript:ENSMUST00000159265;Name=ENSMUSE00000867897;constitutive=0;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00000867897;rank=2;version=2
+1	havana	exon	3283662	3285855	.	-	.	Parent=transcript:ENSMUST00000159265;Name=ENSMUSE00000863980;constitutive=0;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00000863980;rank=1;version=2
+1	ensembl_havana	mRNA	3284705	3741721	.	-	.	ID=transcript:ENSMUST00000070533;Parent=gene:ENSMUSG00000051951;Name=Xkr4-201;biotype=protein_coding;tag=basic;transcript_id=ENSMUST00000070533;transcript_support_level=1 (assigned to previous version 4);version=5
+1	ensembl_havana	three_prime_UTR	3284705	3286244	.	-	.	Parent=transcript:ENSMUST00000070533
+1	ensembl_havana	exon	3284705	3287191	.	-	.	Parent=transcript:ENSMUST00000070533;Name=ENSMUSE00000448840;constitutive=0;ensembl_end_phase=-1;ensembl_phase=1;exon_id=ENSMUSE00000448840;rank=3;version=3
+1	ensembl_havana	CDS	3286245	3287191	.	-	2	ID=CDS:ENSMUSP00000070648;Parent=transcript:ENSMUST00000070533;protein_id=ENSMUSP00000070648
+1	ensembl_havana	exon	3491925	3492124	.	-	.	Parent=transcript:ENSMUST00000070533;Name=ENSMUSE00000449517;constitutive=0;ensembl_end_phase=1;ensembl_phase=2;exon_id=ENSMUSE00000449517;rank=2;version=4
+1	ensembl_havana	CDS	3491925	3492124	.	-	1	ID=CDS:ENSMUSP00000070648;Parent=transcript:ENSMUST00000070533;protein_id=ENSMUSP00000070648
+1	ensembl_havana	CDS	3740775	3741571	.	-	0	ID=CDS:ENSMUSP00000070648;Parent=transcript:ENSMUST00000070533;protein_id=ENSMUSP00000070648
+1	ensembl_havana	exon	3740775	3741721	.	-	.	Parent=transcript:ENSMUST00000070533;Name=ENSMUSE00000485541;constitutive=0;ensembl_end_phase=2;ensembl_phase=-1;exon_id=ENSMUSE00000485541;rank=1;version=4
+1	ensembl_havana	five_prime_UTR	3741572	3741721	.	-	.	Parent=transcript:ENSMUST00000070533
+###
+1	havana	pseudogene	3322980	3323459	.	+	.	ID=gene:ENSMUSG00000102851;Name=Gm18956;biotype=processed_pseudogene;description=predicted gene%2C 18956 [Source:MGI Symbol%3BAcc:MGI:5011141];gene_id=ENSMUSG00000102851;logic_name=havana_mus_musculus;version=2
+1	havana	pseudogenic_transcript	3322980	3323459	.	+	.	ID=transcript:ENSMUST00000192857;Parent=gene:ENSMUSG00000102851;Name=Gm18956-201;biotype=processed_pseudogene;tag=basic;transcript_id=ENSMUST00000192857;transcript_support_level=NA (assigned to previous version 1);version=2
+1	havana	exon	3322980	3323459	.	+	.	Parent=transcript:ENSMUST00000192857;Name=ENSMUSE00001339323;constitutive=1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00001339323;rank=1;version=2
+###
+1	havana	gene	3435954	3438772	.	-	.	ID=gene:ENSMUSG00000103377;Name=Gm37180;biotype=TEC;description=predicted gene%2C 37180 [Source:MGI Symbol%3BAcc:MGI:5610408];gene_id=ENSMUSG00000103377;logic_name=havana_mus_musculus;version=2
+1	havana	unconfirmed_transcript	3435954	3438772	.	-	.	ID=transcript:ENSMUST00000195335;Parent=gene:ENSMUSG00000103377;Name=Gm37180-201;biotype=TEC;tag=basic;transcript_id=ENSMUST00000195335;transcript_support_level=NA (assigned to previous version 1);version=2
+1	havana	exon	3435954	3438772	.	-	.	Parent=transcript:ENSMUST00000195335;Name=ENSMUSE00001343189;constitutive=1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00001343189;rank=1;version=2
+###
+1	havana	gene	3445779	3448011	.	-	.	ID=gene:ENSMUSG00000104017;Name=Gm37363;biotype=TEC;description=predicted gene%2C 37363 [Source:MGI Symbol%3BAcc:MGI:5610591];gene_id=ENSMUSG00000104017;logic_name=havana_mus_musculus;version=2
+1	havana	unconfirmed_transcript	3445779	3448011	.	-	.	ID=transcript:ENSMUST00000192336;Parent=gene:ENSMUSG00000104017;Name=Gm37363-201;biotype=TEC;tag=basic;transcript_id=ENSMUST00000192336;transcript_support_level=NA (assigned to previous version 1);version=2
+1	havana	exon	3445779	3448011	.	-	.	Parent=transcript:ENSMUST00000192336;Name=ENSMUSE00001343686;constitutive=1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=ENSMUSE00001343686;rank=1;version=2
+###
