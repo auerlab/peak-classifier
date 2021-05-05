@@ -28,7 +28,6 @@ int     main(int argc,char *argv[])
 
 {
     int     c,
-	    ch,
 	    status;
     double  min_peak_overlap = 1.0e-9,
 	    min_gff_overlap = 1.0e-9;
@@ -42,6 +41,7 @@ int     main(int argc,char *argv[])
 	    *redirect_overwrite,
 	    *redirect_append,
 	    *overlaps_filename,
+	    *min_overlap_flags = "",
 	    *end,
 	    *gff_stem,
 	    augmented_filename[PATH_MAX + 1],
@@ -78,6 +78,8 @@ int     main(int argc,char *argv[])
 	    if ( *end != '\0' )
 		usage(argv);
 	}
+	else if ( strcmp(argv[c], "--min-either-overlap") == 0 )
+	    min_overlap_flags = "-e";
 	else if ( strcmp(argv[c], "--midpoints") == 0 )
 	    midpoints_only = true;
 	else
@@ -98,7 +100,10 @@ int     main(int argc,char *argv[])
     }
     
     if ( strcmp(argv[++c], "-") == 0 )
+    {
 	gff_stream = stdin;
+	gff_stem = "unknown-stdin-gff";
+    }
     else
     {
 	check_extension(argv[c], ".gff3");
@@ -169,14 +174,14 @@ int     main(int argc,char *argv[])
 	 
 	// Insert "set -x; " for debugging
 	snprintf(cmd, CMD_MAX,
-		 "bedtools intersect -a - -b %s -f %g -F %g -wao"
+		 "bedtools intersect -a - -b %s -f %g -F %g %s -wao"
 		 "| awk 'BEGIN { OFS=IFS; } { if ( $8 == -1 ) "
 		    "$9 = \"upstream-beyond\"; $12 = $3 - $2; "
 		    "printf(\"%%s\\t%%d\\t%%d\\t%%d\\t%%d\\t"
 		    "%%s\\t%%s\\t%%s\\n\", "
 		    "$1, $2, $3, $7, $8, $9, $11, $12); }' %s%s\n",
 		sorted_filename, min_peak_overlap, min_gff_overlap,
-		redirect_append, overlaps_filename);
+		min_overlap_flags, redirect_append, overlaps_filename);
 
 	if ( (intersect_pipe = popen(cmd, "w")) == NULL )
 	{
@@ -439,10 +444,14 @@ void    usage(char *argv[])
 	  "are generated for 1 to 1000, 1001 to 10000, and 10001 to 100000 bases\n"
 	  "upstream.  Peaks that do not overlap any of these or other features are\n"
 	  "reported as 'upstream-beyond.\n\n"
-	  "The minimum peak/gff overlap must range from 1.0e-9 (the default) to 1.0\n"
-	  "These values are passed directlry to bedtools intersect -f/-F.\n"
+	  "The minimum peak/gff overlap must range from 1.0e-9 (the default, which\n"
+	  "corresponds to a single base) to 1.0. These values are passed directlry to\n"
+	  "bedtools intersect -f/-F.\n"
 	  "They must be used with great caution since the size of peaks and GFF\n"
 	  "features varies greatly.\n\n"
+	  "--min-either-overlap indicates that either the minimum peak or the minimum\n"
+	  "GFF feature overlap satisfies the overlap requirement.  Otherwise, both\n"
+	  "overlap requirements must be met.\n\n"
 	  "--midpoints indicates that we are only interested in which feature contains\n"
 	  "the midpoint of each peak.  This is the same as --min-peak-overlap 0.5\n"
 	  "in cases where half the peak is contained in a feature, but can also report\n"
