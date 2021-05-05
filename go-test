@@ -3,21 +3,27 @@
 printf "\n1-base overlaps:\n\n"
 ./peak-classifier test.bed.xz Mus_musculus.GRCm39.103.gff3.gz \
     test-overlaps.tsv
-./filter-overlaps test-overlaps.tsv test-filtered.tsv five_prime_utr \
-    three_prime_utr intron exon upstream1000 upstream10000 upstream100000 \
-    upstream-beyond
+./filter-overlaps test-overlaps.tsv test-filtered.tsv \
+    five_prime_utr three_prime_utr intron exon \
+    upstream1000 upstream10000 upstream100000 upstream-beyond
 
-printf "\n20%% overlaps:\n\n"
+printf "\n20%% peak overlaps:\n\n"
 ./peak-classifier --min-peak-overlap 0.2 test.bed.xz \
-    Mus_musculus.GRCm39.103.gff3.gz test-20-overlaps.tsv
-./filter-overlaps test-20-overlaps.tsv test-20-filtered.tsv five_prime_utr \
-    three_prime_utr intron exon upstream1000 upstream10000 upstream100000 \
-    upstream-beyond
+    Mus_musculus.GRCm39.103.gff3.gz test-peak-20-overlaps.tsv
+./filter-overlaps test-peak-20-overlaps.tsv test-peak-20-filtered.tsv \
+    five_prime_utr three_prime_utr intron exon \
+    upstream1000 upstream10000 upstream100000 upstream-beyond
+
+printf "\n20%% GFF feature overlaps:\n\n"
+./peak-classifier --min-gff-overlap 0.2 test.bed.xz \
+    Mus_musculus.GRCm39.103.gff3.gz test-gff-20-overlaps.tsv
+./filter-overlaps test-gff-20-overlaps.tsv test-gff-20-filtered.tsv \
+    five_prime_utr three_prime_utr intron exon \
+    upstream1000 upstream10000 upstream100000 upstream-beyond
 
 printf "\nMidpoints only:\n\n"
 ./peak-classifier --midpoints test.bed.xz Mus_musculus.GRCm39.103.gff3.gz \
     test-midpoint-overlaps.tsv
-./filter-overlaps test-midpoint-overlaps.tsv test-filtered.tsv five_prime_utr \
-    three_prime_utr intron exon upstream1000 upstream10000 upstream100000 \
-    upstream-beyond
-
+./filter-overlaps test-midpoint-overlaps.tsv test-filtered.tsv \
+    five_prime_utr three_prime_utr intron exon \
+    upstream1000 upstream10000 upstream100000 upstream-beyond

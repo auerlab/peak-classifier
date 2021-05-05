@@ -1,7 +1,6 @@
 /* peak-classifier.c */
 int main(int argc, char *argv[]);
-int gff_augment(FILE *gff_stream, const char *upstream_boundaries);
+int gff_augment(FILE *gff_stream, const char *upstream_boundaries, const char *augmented_filename);
 void gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream, gff_feature_t *gene_feature);
 void generate_upstream_features(FILE *feature_stream, gff_feature_t *gff_feature, plist_t *plist);
 void usage(char *argv[]);
-void check_extension(const char *filename, const char *valid_ext);

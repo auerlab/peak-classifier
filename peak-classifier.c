@@ -21,6 +21,7 @@
 #include <gffio.h>
 #include <plist.h>
 #include <xtendc.h>
+#include <unistd.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -29,7 +30,8 @@ int     main(int argc,char *argv[])
     int     c,
 	    ch,
 	    status;
-    double  min_peak_overlap = 1.0e-9;
+    double  min_peak_overlap = 1.0e-9,
+	    min_gff_overlap = 1.0e-9;
     FILE    *peak_stream,
 	    *gff_stream,
 	    *intersect_pipe;
@@ -40,9 +42,13 @@ int     main(int argc,char *argv[])
 	    *redirect_overwrite,
 	    *redirect_append,
 	    *overlaps_filename,
-	    *sort,
-	    *midpoint_filter = "",
-	    *end;
+	    *end,
+	    *gff_stem,
+	    augmented_filename[PATH_MAX + 1],
+	    sorted_filename[PATH_MAX + 1];
+    bool    midpoints_only = false;
+    bed_feature_t   bed_feature;
+    struct stat     file_info;
     
     if ( argc < 4 )
 	usage(argv);
@@ -66,10 +72,14 @@ int     main(int argc,char *argv[])
 	    if ( *end != '\0' )
 		usage(argv);
 	}
+	else if ( strcmp(argv[c], "--min-gff-overlap") == 0 )
+	{
+	    min_gff_overlap = strtod(argv[++c], &end);
+	    if ( *end != '\0' )
+		usage(argv);
+	}
 	else if ( strcmp(argv[c], "--midpoints") == 0 )
-	    midpoint_filter = "awk 'BEGIN { OFS=\"\\t\"; } $0 !~ \"^#\" "
-		"{ s = ($2 + $3) / 2; e = s + 1; "
-		"printf(\"%u\\t%u\\t%u\\t%u\\t%u\\n\", $1, s, e, $4, $5); }' | ";
+	    midpoints_only = true;
 	else
 	    usage(argv);
     }
@@ -98,6 +108,7 @@ int     main(int argc,char *argv[])
 		    strerror(errno));
 	    exit(EX_NOINPUT);
 	}
+	gff_stem = argv[c];
     }
     
     if ( strcmp(argv[++c], "-") == 0 )
@@ -114,57 +125,81 @@ int     main(int argc,char *argv[])
 	redirect_append = " >> ";
     }
 
-    if ( (status = gff_augment(gff_stream, upstream_boundaries)) == EX_OK )
+    // Already verified .gff3[.*z] extension above
+    *strstr(gff_stem, ".gff3") = '\0';
+    snprintf(augmented_filename, PATH_MAX, "%s-augmented.bed", gff_stem);
+    if ( stat(augmented_filename, &file_info) == 0 )
+	fprintf(stderr, "Using existing %s...\n", augmented_filename);
+    else if ( gff_augment(gff_stream, upstream_boundaries, augmented_filename) != EX_OK )
     {
-	// GNU sort is much faster and can use threads
-	if ( system("which gsort > /dev/null") == 0 )
-	    sort = "gsort";
-	else
-	    sort = "sort";
-	snprintf(cmd, CMD_MAX, "grep -v '^#' pc-gff-augmented.bed | "
-		"%s -n -k 1 -k 2 -k 3 > pc-gff-sorted.bed\n", sort);
-	// fputs(cmd, stderr);
-	fprintf(stderr, "Sorting with %s...\n", sort);
-	if ( (status = system(cmd)) == 0 )
+	fprintf(stderr, "gff_augment() failed.  Removing %s...\n",
+		augmented_filename);
+	unlink(augmented_filename);
+	exit(EX_DATAERR);
+    }
+    
+    snprintf(sorted_filename, PATH_MAX, "%s-augmented+sorted.bed", gff_stem);
+    if ( stat(sorted_filename, &file_info) == 0 )
+	fprintf(stderr, "Using existing %s...\n", sorted_filename);
+    else
+    {
+	snprintf(cmd, CMD_MAX, "grep -v '^#' %s | "
+		"sort -n -k 1 -k 2 -k 3 > %s\n",
+		augmented_filename, sorted_filename);
+	fputs("Sorting...\n", stderr);
+	if ( (status = system(cmd)) != 0 )
 	{
-	    fputs("Finding intersects...\n", stderr);
-	    snprintf(cmd, CMD_MAX,
-		    "printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
-		    redirect_overwrite, overlaps_filename);
-	    if ( (status = system(cmd)) == 0 )
-	    {
-		/*
-		 *  Peaks not overlapping anything else are labeled
-		 *  upstream-beyond.  The entire peak length must overlap the
-		 *  beyond region since none of it overlaps anything else.
-		 */
-		snprintf(cmd, CMD_MAX,
-			 "%sbedtools intersect -a - -b pc-gff-sorted.bed -f %g -wao"
-			 "| cut -f 1,2,3,7,8,9,11,12"
-			 "| awk 'BEGIN { OFS=\"\\t\"; } "
-			 "{ if ( $5 == -1 ) $6 = \"upstream-beyond\"; $8 = $3 - $2; print $0; }'"
-			 "%s%s\n", midpoint_filter, min_peak_overlap,
-			 redirect_append, overlaps_filename);
-		// fputs(cmd, stderr);
-		// Alternative to bedtools intersect:
-		// classify(peak_stream, feature_stream);
-		if ( (intersect_pipe = popen(cmd, "w")) == NULL )
-		{
-		    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
-			    argv[0]);
-		    return EX_CANTCREAT;
-		}
-		while ( (ch = getc(peak_stream)) != EOF )
-		    putc(ch, intersect_pipe);
-		pclose(intersect_pipe);
-	    }
+	    fprintf(stderr, "Sort failed.  Removing %s...\n", sorted_filename);
+	    unlink(sorted_filename);
+	    exit(EX_DATAERR);
 	}
     }
-    else
-	fprintf(stderr, "peak-classifier: Error filtering GFF: %s\n",
-		strerror(errno));
+    
+    fputs("Finding intersects...\n", stderr);
+    snprintf(cmd, CMD_MAX,
+	    "printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
+	    redirect_overwrite, overlaps_filename);
+    if ( (status = system(cmd)) == 0 )
+    {
+	/*
+	 *  Peaks not overlapping anything else are labeled
+	 *  upstream-beyond.  The entire peak length must overlap the
+	 *  beyond region since none of it overlaps anything else.
+	 */
+	 
+	// Insert "set -x; " for debugging
+	snprintf(cmd, CMD_MAX,
+		 "bedtools intersect -a - -b %s -f %g -F %g -wao"
+		 "| awk 'BEGIN { OFS=IFS; } { if ( $8 == -1 ) "
+		    "$9 = \"upstream-beyond\"; $12 = $3 - $2; "
+		    "printf(\"%%s\\t%%d\\t%%d\\t%%d\\t%%d\\t"
+		    "%%s\\t%%s\\t%%s\\n\", "
+		    "$1, $2, $3, $7, $8, $9, $11, $12); }' %s%s\n",
+		sorted_filename, min_peak_overlap, min_gff_overlap,
+		redirect_append, overlaps_filename);
+
+	if ( (intersect_pipe = popen(cmd, "w")) == NULL )
+	{
+	    fprintf(stderr, "%s: Cannot pipe data to bedtools intersect.\n",
+		    argv[0]);
+	    return EX_CANTCREAT;
+	}
+	while ( bed_read_feature(peak_stream, &bed_feature) != EOF )
+	{
+	    if ( midpoints_only )
+	    {
+		// Replace peak start/end with midpoint coordinates
+		bed_set_start_pos(&bed_feature,
+		    (BED_START_POS(&bed_feature) + BED_END_POS(&bed_feature))
+		    / 2);
+		bed_set_end_pos(&bed_feature, BED_START_POS(&bed_feature) + 1);
+	    }
+	    bed_write_feature(intersect_pipe, &bed_feature,
+			      BED_FIELD_ALL);
+	}
+	pclose(intersect_pipe);
+    }
     xc_fclose(peak_stream);
-    xc_fclose(gff_stream);
     return status;
 }
 
@@ -180,7 +215,8 @@ int     main(int argc,char *argv[])
  *  2021-04-15  Jason Bacon Begin
  ***************************************************************************/
 
-int     gff_augment(FILE *gff_stream, const char *upstream_boundaries)
+int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
+		    const char *augmented_filename)
 
 {
     FILE            *bed_stream;
@@ -190,7 +226,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries)
 		    strand;
     plist_t         plist = PLIST_INIT;
     
-    if ( (bed_stream = fopen("pc-gff-augmented.bed", "w")) == NULL )
+    if ( (bed_stream = fopen(augmented_filename, "w")) == NULL )
     {
 	fprintf(stderr, "peak-classifier: Cannot write temp GFF: %s\n",
 		strerror(errno));
@@ -239,6 +275,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries)
 	    }
 	}
     }
+    xc_fclose(gff_stream);
     fclose(bed_stream);
     return EX_OK;
 }
@@ -395,18 +432,20 @@ void    usage(char *argv[])
 {
     fprintf(stderr,
 	    "\nUsage: %s [--upstream-boundaries pos[,pos ...]] "
-	    "[--min-peak-overlap x.y] [--midpoints] "
+	    "[--min-peak-overlap x.y] [--min-gff-overlap x.y] [--midpoints] "
 	    "peaks.bed features.gff overlaps.tsv\n\n", argv[0]);
     fputs("Upstream boundaries are distances upstream from TSS, for which we want\n"
 	  "overlaps reported.  The default is 1000,10000,100000, which means features\n"
 	  "are generated for 1 to 1000, 1001 to 10000, and 10001 to 100000 bases\n"
 	  "upstream.  Peaks that do not overlap any of these or other features are\n"
 	  "reported as 'upstream-beyond.\n\n"
-	  "The min peak overlap must range from 1.0e-9 (the default) to 1.0\n"
-	  "This value is passed directlry to bedtools intersect -f.\n\n"
+	  "The minimum peak/gff overlap must range from 1.0e-9 (the default) to 1.0\n"
+	  "These values are passed directlry to bedtools intersect -f/-F.\n"
+	  "They must be used with great caution since the size of peaks and GFF\n"
+	  "features varies greatly.\n\n"
 	  "--midpoints indicates that we are only interested in which feature contains\n"
 	  "the midpoint of each peak.  This is the same as --min-peak-overlap 0.5\n"
 	  "in cases where half the peak is contained in a feature, but can also report\n"
-	  "overlaps with features too small to contain much overlap.\n\n", stderr);
+	  "overlaps with features too small to contain this much overlap.\n\n", stderr);
     exit(EX_USAGE);
 }
