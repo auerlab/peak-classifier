@@ -9,8 +9,9 @@ a GFF
 .PP
 .nf 
 .na 
-peak-classifier [--upstream-boundaries pos[,pos...]] \
-peaks.bed features.gff overlaps.tsv
+peak-classifier [--upstream-boundaries pos[,pos...]] \\
+    [--min-peak-overlap x.y] [--min-gff-overlap x.y] [--midpoints] \\
+    peaks.bed features.gff3 overlaps.tsv
 .ad
 .fi
 
@@ -20,6 +21,41 @@ peaks.bed features.gff overlaps.tsv
 classifies all peaks in the given BED file according to features found in
 the provided GFF.  Peaks are typically called from ChIP/ATAC-Seq
 experiments using tools such as MACS2.
+
+.SH OPTIONS
+.TP
+\fB\-\-upstream-boundaries pos[,pos...]\fR
+Specify boundaries for possible promoter regions.  The list must be
+comma-separated and in ascending order.  The default is 1000,10000,100000,
+which causes peak-classifier to generate GFF features for 1-1000,
+1001-10000, and 10001-100000 bases upstream of TSS.
+
+.TP
+\fB\-\-min-peak-overlap x.y
+Specify the minimum overlap as a fraction of the peak.  This option is
+passed to bedtools -f.  The default is 1.0e-9, which indicates 1 base. 
+This option should be used with caution as peaks vary greatly in size.
+
+.TP
+\fB\-\-min-gff-overlap x.y
+Specify the minimum overlap as a fraction of the GFF feature.  This option is
+passed to bedtools -F.  The default is 1.0e-9, which indicates 1 base. 
+This flag must be used with caution, as GFF features vary in size from a
+few bases to millions.  Hence, the same fraction of different features can
+have wildly different meaning.
+
+.TP
+\fB\-\-min-either-overlap
+Indicates that meeting either the peak or the GFF feature overlap minimum
+qualifies as an overlap.  Otherwise, both minimums must be met.
+
+.TP
+\fB\-\-midpoints
+An overlap is reported only when the midpoint of a peak falls within a
+feature.  For fixed-size peaklets, the midpoint corresponds to the summit
+as long as two or more peaklets were not merged.  Whether or not the
+midpoint is the summit, the meaning of this location is questionable,
+especially if coverage is low.
 
 .SH "DESCRIPTION"
 

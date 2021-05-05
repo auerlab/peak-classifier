@@ -438,7 +438,7 @@ void    usage(char *argv[])
     fprintf(stderr,
 	    "\nUsage: %s [--upstream-boundaries pos[,pos ...]] "
 	    "[--min-peak-overlap x.y] [--min-gff-overlap x.y] [--midpoints] "
-	    "peaks.bed features.gff overlaps.tsv\n\n", argv[0]);
+	    "peaks.bed features.gff3 overlaps.tsv\n\n", argv[0]);
     fputs("Upstream boundaries are distances upstream from TSS, for which we want\n"
 	  "overlaps reported.  The default is 1000,10000,100000, which means features\n"
 	  "are generated for 1 to 1000, 1001 to 10000, and 10001 to 100000 bases\n"
