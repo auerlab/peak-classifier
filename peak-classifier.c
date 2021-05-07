@@ -22,6 +22,7 @@
 #include <plist.h>
 #include <xtendc.h>
 #include <unistd.h>
+#include <assert.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -90,7 +91,7 @@ int     main(int argc,char *argv[])
 	peak_stream = stdin;
     else
     {
-	check_extension(argv[c], ".bed");
+	assert(valid_extension(argv[c], ".bed"));
 	if ( (peak_stream = xc_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
@@ -106,7 +107,7 @@ int     main(int argc,char *argv[])
     }
     else
     {
-	check_extension(argv[c], ".gff3");
+	assert(valid_extension(argv[c], ".gff3"));
 	if ( (gff_stream = xc_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
@@ -125,7 +126,7 @@ int     main(int argc,char *argv[])
     else
     {
 	overlaps_filename = argv[c];
-	check_extension(overlaps_filename, ".tsv");
+	assert(valid_extension(overlaps_filename, ".tsv"));
 	redirect_overwrite = " > ";
 	redirect_append = " >> ";
     }
@@ -253,7 +254,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( strisnum(GFF_SEQUENCE(&gff_feature)) )
+	if ( strisint(GFF_SEQUENCE(&gff_feature), 10) )
 	{
 	    feature = GFF_NAME(&gff_feature);
 	    if ( strcmp(feature, "###") == 0 )
