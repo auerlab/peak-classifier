@@ -20,7 +20,7 @@
 #include <bedio.h>
 #include <gffio.h>
 #include <plist.h>
-#include <xtendc.h>
+#include <xtend.h>
 #include <unistd.h>
 #include <assert.h>
 #include "peak-classifier.h"

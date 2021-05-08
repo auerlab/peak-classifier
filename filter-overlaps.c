@@ -14,7 +14,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <dsvio.h>
-#include <xtendc.h>
+#include <xtend.h>
 #include "filter-overlaps.h"
 
 int     main(int argc,char *argv[])
