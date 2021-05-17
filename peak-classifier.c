@@ -149,7 +149,8 @@ int     main(int argc,char *argv[])
 	fprintf(stderr, "Using existing %s...\n", sorted_filename);
     else
     {
-	snprintf(cmd, CMD_MAX, "grep -v '^#' %s | "
+	// LC_ALL=C makes sort assume 1 byte/char, which improves speed
+	snprintf(cmd, CMD_MAX, "env LC_ALL=C grep -v '^#' %s | "
 		"sort -n -k 1 -k 2 -k 3 > %s\n",
 		augmented_filename, sorted_filename);
 	fputs("Sorting...\n", stderr);
