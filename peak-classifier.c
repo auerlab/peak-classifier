@@ -328,8 +328,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
 	if ( (strstr(subfeature.name, "RNA") != NULL) ||
-	     (strstr(subfeature.name, "_transcript") != NULL) ||
-	     (strstr(subfeature.name, "gene_segment") != NULL) )
+	     (strstr(subfeature.name, "transcript") != NULL) ||
+	     (strstr(subfeature.name, "gene_segment") != NULL) ||
+	     (strstr(subfeature.name, "_overlapping_ncrna") != NULL) )
 	    first_exon = true;
 	
 	// Generate introns between exons

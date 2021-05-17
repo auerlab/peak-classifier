@@ -1,9 +1,10 @@
 #!/bin/sh -e
 
-if [ -z $(ls Mus_musculus.GRC*.gff3.gz) ]; then
-    printf "No GFF found.\n"
-    release=103
-    file=Mus_musculus.GRCm39.$release.gff3.gz
-    url=http://ftp.ensembl.org/pub/release-103/gff3/mus_musculus/$file
+gff=$(Utils/gff-name)
+release=$(echo $gff | cut -d . -f 3)
+if [ ! -e $gff ]; then
+    url=http://ftp.ensembl.org/pub/release-$release/gff3/mus_musculus/$gff
     fetch $url
+else
+    printf "$gff already exists.  Remove it and rerun $0 to force download.\n"
 fi
