@@ -304,8 +304,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     gff_feature_t   subfeature = GFF_INIT;
     bed_feature_t   bed_feature = BED_INIT;
     bool            first_exon = true,
-		    exon,
-		    utr;
+		    exon;
     uint64_t        intron_start,
 		    intron_end;
     char            *feature,
@@ -325,7 +324,6 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     {
 	feature = GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
-	utr = (strstr(feature, "UTR") != NULL);
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
 	if ( (strstr(subfeature.name, "RNA") != NULL) ||
