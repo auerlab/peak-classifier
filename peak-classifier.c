@@ -92,7 +92,7 @@ int     main(int argc,char *argv[])
     else
     {
 	assert(valid_extension(argv[c], ".bed"));
-	if ( (peak_stream = xc_fopen(argv[c], "r")) == NULL )
+	if ( (peak_stream = xt_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -108,7 +108,7 @@ int     main(int argc,char *argv[])
     else
     {
 	assert(valid_extension(argv[c], ".gff3"));
-	if ( (gff_stream = xc_fopen(argv[c], "r")) == NULL )
+	if ( (gff_stream = xt_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
 		    strerror(errno));
@@ -206,7 +206,7 @@ int     main(int argc,char *argv[])
 	}
 	pclose(intersect_pipe);
     }
-    xc_fclose(peak_stream);
+    xt_fclose(peak_stream);
     return status;
 }
 
@@ -282,7 +282,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 	    }
 	}
     }
-    xc_fclose(gff_stream);
+    xt_fclose(gff_stream);
     fclose(bed_stream);
     return EX_OK;
 }

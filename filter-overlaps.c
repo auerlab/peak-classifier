@@ -68,7 +68,7 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     
     if ( strcmp(overlaps_file, "-") == 0 )
 	infile = stdin;
-    else if ( (infile = xc_fopen(overlaps_file, "r")) == NULL )
+    else if ( (infile = xt_fopen(overlaps_file, "r")) == NULL )
     {
 	fprintf(stderr, "filter-overlaps: Cannot open %s: %s\n",
 		overlaps_file, strerror(errno));
@@ -77,7 +77,7 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     
     if ( strcmp(output_file, "-") == 0 )
 	outfile = stdout;
-    else if ( (outfile = xc_fopen(output_file, "w")) == NULL )
+    else if ( (outfile = xt_fopen(output_file, "w")) == NULL )
     {
 	fprintf(stderr, "filter-overlaps: Cannot open %s: %s\n",
 		overlaps_file, strerror(errno));
