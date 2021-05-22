@@ -191,7 +191,7 @@ int     main(int argc,char *argv[])
 		    argv[0]);
 	    return EX_CANTCREAT;
 	}
-	while ( bed_read_feature(peak_stream, &bed_feature) != EOF )
+	while ( bed_read_feature(peak_stream, &bed_feature, BED_FIELD_ALL) != EOF )
 	{
 	    if ( midpoints_only )
 	    {
