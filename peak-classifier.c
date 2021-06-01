@@ -16,13 +16,12 @@
 #include <ctype.h>
 #include <limits.h>
 #include <sys/stat.h>
-#include <biostring.h>
-#include <bedio.h>
-#include <gffio.h>
-#include <plist.h>
-#include <xtend.h>
 #include <unistd.h>
 #include <assert.h>
+#include <xtend.h>
+#include <biolibc/bed.h>
+#include <biolibc/gff.h>
+#include <biolibc/plist.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
