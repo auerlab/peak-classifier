@@ -120,7 +120,7 @@ available package sets.
 Below are cave man install instructions for development purposes, not
 recommended for regular use.
 
-peak-classifier depends on [biolibc](https://github.com/outpaddling/biolibc).
+peak-classifier depends on [biolibc](https://github.com/auerlab/biolibc).
 Install biolibc before attempting to build peak-classifier.
 
 1. Clone the repository
