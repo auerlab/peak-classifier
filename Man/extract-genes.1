@@ -1,0 +1,43 @@
+.TH extract-genes 1
+.SH NAME    \" Section header
+.PP
+
+extract-genes \- Extract genes from a BED files containing GFF features
+
+.SH SYNOPSIS
+.PP
+.nf 
+.na 
+extract-genes feature-file.bed
+.ad
+.fi
+
+.SH "DESCRIPTION"
+.B extract-genes
+extracts genes from a BED file containing features like those in a GFF, and
+saves each gene to a separate file under the subdirectory
+Genes-feature-file.
+
+The resulting files are suitable for visualizing with feature-view(1).
+
+.SH EXAMPLE
+
+.nf
+.na
+peak-classifier peaks.bed features.gff3 overlaps.tsv
+extract-genes features.bed
+feature-view Genes-features/2-2432432-2423444.bed
+.ad
+.fi
+
+.SH "SEE ALSO"
+peak-classifier(1), filter-overlaps(1), feature-view(1)
+
+.SH BUGS
+Please report bugs to the author and send patches in unified diff format.
+(man diff for more information)
+
+.SH AUTHOR
+.nf
+.na
+J. Bacon

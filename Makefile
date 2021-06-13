@@ -104,6 +104,8 @@ MV      ?= mv
 MKDIR   ?= mkdir
 LN      ?= ln
 RM      ?= rm
+SED     ?= sed
+CHMOD   ?= chmod
 
 # No full pathnames for these.  Allow PATH to dtermine which one is used
 # in case a locally installed version is preferred.
@@ -159,11 +161,18 @@ realclean: clean
 # Install all target files (binaries, libraries, docs, etc.)
 
 install: all
-	${MKDIR} -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/man/man1
+	${MKDIR} -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/libexec \
+	    ${DESTDIR}${PREFIX}/man/man1
 	${INSTALL} -s -m 0555 ${BIN1} ${BIN2} ${DESTDIR}${PREFIX}/bin
-	${INSTALL} -m 0444 ${MAN1} ${MAN2} ${DESTDIR}${MANPREFIX}/man/man1
+	${RM} -f ${DESTDIR}${PREFIX}/bin/extract-genes
+	${SED} -e "s|extract-genes.awk|${PREFIX}/libexec/&|" \
+	    extract-genes.sh > ${DESTDIR}${PREFIX}/bin/extract-genes
+	${CHMOD} 0555 ${DESTDIR}${PREFIX}/bin/extract-genes
+	${INSTALL} -m 0555 extract-genes.awk \
+	    ${DESTDIR}${PREFIX}/libexec
 	${INSTALL} -m 0555 feature-view.py \
-	    ${DESTDIR}${MANPREFIX}/bin/feature-view
+	    ${DESTDIR}${PREFIX}/bin/feature-view
+	${INSTALL} -m 0444 Man/*.1 ${DESTDIR}${MANPREFIX}/man/man1
 
 test: all
 	./test.sh
