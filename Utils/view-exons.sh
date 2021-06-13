@@ -1,5 +1,5 @@
 #!/bin/sh -e
 
-gzcat Mus_musculus.GRCm39.103.gff3.gz | \
+gzcat $(Utils/gff-name.sh) | \
     awk '$3 == "gene" || $3 == "exon" { print $1, $4, $5, $3, $7 }'
 

@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-gff=Mus_musculus.GRCm38.100.gff3.gz
+gff=$(Utils/gff-name.sh)
 printf "\n1-base overlaps:\n\n"
 ./peak-classifier test.bed.xz $gff \
     test-overlaps.tsv
