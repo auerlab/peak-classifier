@@ -304,7 +304,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     bed_feature_t   bed_feature = BED_INIT;
     bool            first_exon = true,
 		    exon;
-    uint64_t        intron_start,
+    uint64_t        intron_start = 0,   // Silence bogus warning from GCC
 		    intron_end;
     char            *feature,
 		    strand,
