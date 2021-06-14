@@ -14,6 +14,9 @@ cd ..
 make clean all
 cd Test
 
+# Linux and NetBSD
+export LD_LIBRARY_PATH=../../local/lib:/usr/lib64:/usr/lib
+
 printf "\n1-base overlaps:\n\n"
 ../peak-classifier test.bed.xz $gff \
     test-overlaps.tsv
