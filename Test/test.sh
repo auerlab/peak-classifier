@@ -14,7 +14,7 @@ cd ..
 make clean all
 cd Test
 
-# Linux and NetBSD
+# Use cave-man installed libs if available
 export LD_LIBRARY_PATH=../../local/lib:/usr/lib64:/usr/lib
 
 printf "\n1-base overlaps:\n\n"

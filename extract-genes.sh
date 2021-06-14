@@ -31,7 +31,7 @@ bed_file=$1
 dir=Genes-${bed_file%.bed}
 mkdir -p $dir
 
-if which mawk; then
+if which mawk > /dev/null 2>&1; then
     awk=mawk
 else
     awk=awk
