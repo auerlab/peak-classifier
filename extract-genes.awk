@@ -24,6 +24,7 @@ BEGIN {
 	while ( getline && ($0 != "###") ) {
 	    print $0 >> filename;
 	}
+	close(filename);
     }
     else {
 	# Discard non-gene features

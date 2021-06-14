@@ -12,6 +12,11 @@
 #   2021-04-21  Jason Bacon Begin
 
 import sys,os
+# Pkgsrc
+# Requires math/py-matplotlib and x11/py-Tk
+import matplotlib
+matplotlib.use('TkAgg')
+# End pkgsrc
 import matplotlib.pyplot as pyplot
 import numpy
 
