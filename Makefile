@@ -64,7 +64,10 @@ LOCALBASE   ?= ../local
 # Install in /usr/local, unless defined by the parent Makefile, the
 # environment, or a command line option such as PREFIX=/opt/local.
 PREFIX      ?= ${LOCALBASE}
+
+# Allow caller to override either MANPREFIX or MANDIR
 MANPREFIX   ?= ${PREFIX}
+MANDIR      ?= ${MANPREFIX}/man
 
 ############################################################################
 # Build flags
@@ -162,7 +165,7 @@ realclean: clean
 
 install: all
 	${MKDIR} -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/libexec \
-	    ${DESTDIR}${PREFIX}/man/man1
+	    ${DESTDIR}${MANDIR}/man1
 	${INSTALL} -s -m 0555 ${BIN1} ${BIN2} ${DESTDIR}${PREFIX}/bin
 	${RM} -f ${DESTDIR}${PREFIX}/bin/extract-genes
 	${SED} -e "s|extract-genes.awk|${PREFIX}/libexec/&|" \
@@ -172,7 +175,7 @@ install: all
 	    ${DESTDIR}${PREFIX}/libexec
 	${INSTALL} -m 0555 feature-view.py \
 	    ${DESTDIR}${PREFIX}/bin/feature-view
-	${INSTALL} -m 0444 Man/*.1 ${DESTDIR}${MANPREFIX}/man/man1
+	${INSTALL} -m 0444 Man/*.1 ${DESTDIR}${MANDIR}/man1
 
 test: all
 	./test.sh
