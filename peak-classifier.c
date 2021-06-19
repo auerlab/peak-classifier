@@ -257,6 +257,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 	if ( strisint(GFF_SEQUENCE(&gff_feature), 10) )
 	{
 	    feature = GFF_NAME(&gff_feature);
+	    // FIXME: Rely on parent IDs instead of ###?
 	    if ( strcmp(feature, "###") == 0 )
 		fputs("###\n", bed_stream);
 	    else if ( strstr(feature, "gene") != NULL )
