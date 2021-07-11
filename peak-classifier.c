@@ -251,7 +251,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     
     fputs("Augmenting GFF3 data...\n", stderr);
     gff_skip_header(gff_stream);
-    while ( gff_read_feature(gff_stream, &gff_feature) == BIO_READ_OK )
+    while ( gff_read_feature(gff_stream, &gff_feature, GFF_FIELD_ALL) == BIO_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
 	if ( strisint(GFF_SEQUENCE(&gff_feature), 10) )
@@ -319,7 +319,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	exit(EX_DATAERR);
     }
     
-    while ( (gff_read_feature(gff_stream, &subfeature) == BIO_READ_OK) &&
+    while ( (gff_read_feature(gff_stream, &subfeature, GFF_FIELD_ALL) == BIO_READ_OK) &&
 	    (strcmp(subfeature.name, "###") != 0) )
     {
 	feature = GFF_NAME(&subfeature);
