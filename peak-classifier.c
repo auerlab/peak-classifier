@@ -21,7 +21,7 @@
 #include <xtend.h>
 #include <biolibc/bed.h>
 #include <biolibc/gff.h>
-#include <biolibc/plist.h>
+#include <biolibc/pos-list.h>
 #include "peak-classifier.h"
 
 int     main(int argc,char *argv[])
@@ -230,7 +230,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     gff_feature_t   gff_feature = GFF_INIT;
     char            *feature,
 		    strand;
-    plist_t         plist = PLIST_INIT;
+    pos_list_t      pos_list = POS_LIST_INIT;
     
     if ( (bed_stream = fopen(augmented_filename, "w")) == NULL )
     {
@@ -240,10 +240,10 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     }
     fprintf(bed_stream, "#CHROM\tFirst\tLast+1\tStrand+Feature\n");
     
-    plist_from_csv(&plist, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
+    pos_list_from_csv(&pos_list, upstream_boundaries, MAX_UPSTREAM_BOUNDARIES);
     // Upstream features are 1 to first pos, first + 1 to second, etc.
-    plist_add_position(&plist, 0);
-    plist_sort(&plist, PLIST_ASCENDING);
+    pos_list_add_position(&pos_list, 0);
+    pos_list_sort(&pos_list, POS_LIST_ASCENDING);
 
     // Write all of the first 4 fields to the feature file
     bed_set_fields(&bed_feature, 6);
@@ -268,10 +268,10 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 		
 		if ( strand == '+' )
-		    generate_upstream_features(bed_stream, &gff_feature, &plist);
+		    generate_upstream_features(bed_stream, &gff_feature, &pos_list);
 		gff_process_subfeatures(gff_stream, bed_stream, &gff_feature);
 		if ( strand == '-' )
-		    generate_upstream_features(bed_stream, &gff_feature, &plist);
+		    generate_upstream_features(bed_stream, &gff_feature, &pos_list);
 		fputs("###\n", bed_stream);
 	    }
 	    else if ( strcmp(feature, "chromosome") != 0 )
@@ -375,7 +375,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
  ***************************************************************************/
 
 void    generate_upstream_features(FILE *feature_stream,
-				   gff_feature_t *gff_feature, plist_t *plist)
+				   gff_feature_t *gff_feature, pos_list_t *pos_list)
 
 {
     bed_feature_t   bed_feature[MAX_UPSTREAM_BOUNDARIES];
@@ -385,7 +385,7 @@ void    generate_upstream_features(FILE *feature_stream,
     
     strand = GFF_STRAND(gff_feature);
 
-    for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
+    for (c = 0; c < POS_LIST_COUNT(pos_list) - 1; ++c)
     {
 	bed_set_fields(&bed_feature[c], 6);
 	bed_set_strand(&bed_feature[c], strand);
@@ -400,34 +400,34 @@ void    generate_upstream_features(FILE *feature_stream,
 	{
 	    bed_set_start_pos(&bed_feature[c],
 			      GFF_START_POS(gff_feature) - 
-			      PLIST_POSITIONS(plist, c + 1) - 1);
+			      POS_LIST_POSITIONS(pos_list, c + 1) - 1);
 	    bed_set_end_pos(&bed_feature[c],
 			    GFF_START_POS(gff_feature) -
-			    PLIST_POSITIONS(plist, c) - 1);
+			    POS_LIST_POSITIONS(pos_list, c) - 1);
 	}
 	else
 	{
 	    bed_set_start_pos(&bed_feature[c],
 			      GFF_END_POS(gff_feature) +
-			      PLIST_POSITIONS(plist, c));
+			      POS_LIST_POSITIONS(pos_list, c));
 	    bed_set_end_pos(&bed_feature[c],
 			    GFF_END_POS(gff_feature) + 
-			    PLIST_POSITIONS(plist, c + 1));
+			    POS_LIST_POSITIONS(pos_list, c + 1));
 	}
 	
 	snprintf(name, BED_NAME_MAX_CHARS, "upstream%" PRIu64,
-		 PLIST_POSITIONS(plist, c + 1));
+		 POS_LIST_POSITIONS(pos_list, c + 1));
 	bed_set_name(&bed_feature[c], name);
     }
     
     if ( strand == '-' )
     {
-	for (c = 0; c < PLIST_COUNT(plist) - 1; ++c)
+	for (c = 0; c < POS_LIST_COUNT(pos_list) - 1; ++c)
 	    bed_write_feature(feature_stream, &bed_feature[c], BED_FIELD_ALL);
     }
     else
     {
-	for (c = PLIST_COUNT(plist) - 2; c >= 0; --c)
+	for (c = POS_LIST_COUNT(pos_list) - 2; c >= 0; --c)
 	    bed_write_feature(feature_stream, &bed_feature[c], BED_FIELD_ALL);
     }
 }
