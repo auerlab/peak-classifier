@@ -14,7 +14,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <xtend.h>
-#include <biolibc/dsv.h>
 #include "filter-overlaps.h"
 
 int     main(int argc,char *argv[])
