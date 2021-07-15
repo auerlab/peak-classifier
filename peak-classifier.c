@@ -47,7 +47,7 @@ int     main(int argc,char *argv[])
 	    augmented_filename[PATH_MAX + 1],
 	    sorted_filename[PATH_MAX + 1];
     bool    midpoints_only = false;
-    bed_feature_t   bed_feature;
+    bl_bed_t   bed_feature;
     struct stat     file_info;
     
     if ( argc < 4 )
@@ -226,11 +226,11 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 
 {
     FILE            *bed_stream;
-    bed_feature_t   bed_feature = BED_INIT;
-    gff_feature_t   gff_feature = GFF_INIT;
+    bl_bed_t   bed_feature = BED_INIT;
+    bl_gff_t   gff_feature = GFF_INIT;
     char            *feature,
 		    strand;
-    pos_list_t      pos_list = POS_LIST_INIT;
+    bl_pos_list_t      pos_list = POS_LIST_INIT;
     
     if ( (bed_stream = fopen(augmented_filename, "w")) == NULL )
     {
@@ -251,7 +251,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     
     fputs("Augmenting GFF3 data...\n", stderr);
     gff_skip_header(gff_stream);
-    while ( gff_read_feature(gff_stream, &gff_feature, GFF_FIELD_ALL) == BIO_READ_OK )
+    while ( gff_read_feature(gff_stream, &gff_feature, GFF_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
 	if ( strisint(GFF_SEQUENCE(&gff_feature), 10) )
@@ -298,11 +298,11 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
  ***************************************************************************/
 
 void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
-				gff_feature_t *gene_feature)
+				bl_gff_t *gene_feature)
 
 {
-    gff_feature_t   subfeature = GFF_INIT;
-    bed_feature_t   bed_feature = BED_INIT;
+    bl_gff_t   subfeature = GFF_INIT;
+    bl_bed_t   bed_feature = BED_INIT;
     bool            first_exon = true,
 		    exon;
     uint64_t        intron_start = 0,   // Silence bogus warning from GCC
@@ -313,13 +313,13 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 
     bed_set_fields(&bed_feature, 6);
     strand = GFF_STRAND(gene_feature);
-    if ( bed_set_strand(&bed_feature, strand) != BIO_DATA_OK )
+    if ( bed_set_strand(&bed_feature, strand) != BL_DATA_OK )
     {
 	fputs("gff_process_subfeatures().\n", stderr);
 	exit(EX_DATAERR);
     }
     
-    while ( (gff_read_feature(gff_stream, &subfeature, GFF_FIELD_ALL) == BIO_READ_OK) &&
+    while ( (gff_read_feature(gff_stream, &subfeature, GFF_FIELD_ALL) == BL_READ_OK) &&
 	    (strcmp(subfeature.name, "###") != 0) )
     {
 	feature = GFF_NAME(&subfeature);
@@ -375,10 +375,10 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
  ***************************************************************************/
 
 void    generate_upstream_features(FILE *feature_stream,
-				   gff_feature_t *gff_feature, pos_list_t *pos_list)
+				   bl_gff_t *gff_feature, bl_pos_list_t *pos_list)
 
 {
-    bed_feature_t   bed_feature[MAX_UPSTREAM_BOUNDARIES];
+    bl_bed_t   bed_feature[MAX_UPSTREAM_BOUNDARIES];
     char            strand,
 		    name[BED_NAME_MAX_CHARS + 1];
     int             c;
