@@ -227,7 +227,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 {
     FILE            *bed_stream;
     bl_bed_t   bed_feature = BED_INIT;
-    bl_gff_t   gff_feature = GFF_INIT;
+    bl_gff_t   gff_feature = BL_GFF_INIT;
     char            *feature,
 		    strand;
     bl_pos_list_t      pos_list = POS_LIST_INIT;
@@ -251,19 +251,19 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     
     fputs("Augmenting GFF3 data...\n", stderr);
     gff_skip_header(gff_stream);
-    while ( gff_read_feature(gff_stream, &gff_feature, GFF_FIELD_ALL) == BL_READ_OK )
+    while ( gff_read_feature(gff_stream, &gff_feature, BL_GFF_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( strisint(GFF_SEQUENCE(&gff_feature), 10) )
+	if ( strisint(BL_GFF_SEQUENCE(&gff_feature), 10) )
 	{
-	    feature = GFF_NAME(&gff_feature);
+	    feature = BL_GFF_NAME(&gff_feature);
 	    // FIXME: Rely on parent IDs instead of ###?
 	    if ( strcmp(feature, "###") == 0 )
 		fputs("###\n", bed_stream);
 	    else if ( strstr(feature, "gene") != NULL )
 	    {
 		// Write out upstream regions for likely regulatory elements
-		strand = GFF_STRAND(&gff_feature);
+		strand = BL_GFF_STRAND(&gff_feature);
 		gff_to_bed(&bed_feature, &gff_feature);
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 		
@@ -301,7 +301,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 				bl_gff_t *gene_feature)
 
 {
-    bl_gff_t   subfeature = GFF_INIT;
+    bl_gff_t   subfeature = BL_GFF_INIT;
     bl_bed_t   bed_feature = BED_INIT;
     bool            first_exon = true,
 		    exon;
@@ -312,17 +312,17 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		    name[BED_NAME_MAX_CHARS + 1];
 
     bed_set_fields(&bed_feature, 6);
-    strand = GFF_STRAND(gene_feature);
+    strand = BL_GFF_STRAND(gene_feature);
     if ( bed_set_strand(&bed_feature, strand) != BL_DATA_OK )
     {
 	fputs("gff_process_subfeatures().\n", stderr);
 	exit(EX_DATAERR);
     }
     
-    while ( (gff_read_feature(gff_stream, &subfeature, GFF_FIELD_ALL) == BL_READ_OK) &&
+    while ( (gff_read_feature(gff_stream, &subfeature, BL_GFF_FIELD_ALL) == BL_READ_OK) &&
 	    (strcmp(subfeature.name, "###") != 0) )
     {
-	feature = GFF_NAME(&subfeature);
+	feature = BL_GFF_NAME(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
@@ -337,8 +337,8 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	{
 	    if ( !first_exon )
 	    {
-		intron_end = GFF_START_POS(&subfeature) - 1;
-		bed_set_chromosome(&bed_feature, GFF_SEQUENCE(&subfeature));
+		intron_end = BL_GFF_START_POS(&subfeature) - 1;
+		bed_set_chromosome(&bed_feature, BL_GFF_SEQUENCE(&subfeature));
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
@@ -354,7 +354,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		bed_write_feature(bed_stream, &bed_feature, BED_FIELD_ALL);
 	    }
 	    
-	    intron_start = GFF_END_POS(&subfeature);
+	    intron_start = BL_GFF_END_POS(&subfeature);
 	    first_exon = false;
 	}
 	
@@ -383,13 +383,13 @@ void    generate_upstream_features(FILE *feature_stream,
 		    name[BED_NAME_MAX_CHARS + 1];
     int             c;
     
-    strand = GFF_STRAND(gff_feature);
+    strand = BL_GFF_STRAND(gff_feature);
 
     for (c = 0; c < POS_LIST_COUNT(pos_list) - 1; ++c)
     {
 	bed_set_fields(&bed_feature[c], 6);
 	bed_set_strand(&bed_feature[c], strand);
-	bed_set_chromosome(&bed_feature[c], GFF_SEQUENCE(gff_feature));
+	bed_set_chromosome(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature));
 	/*
 	 *  BED start is 0-based and inclusive
 	 *  GFF is 1-based and inclusive
@@ -399,19 +399,19 @@ void    generate_upstream_features(FILE *feature_stream,
 	if ( strand == '+' )
 	{
 	    bed_set_start_pos(&bed_feature[c],
-			      GFF_START_POS(gff_feature) - 
+			      BL_GFF_START_POS(gff_feature) - 
 			      POS_LIST_POSITIONS(pos_list, c + 1) - 1);
 	    bed_set_end_pos(&bed_feature[c],
-			    GFF_START_POS(gff_feature) -
+			    BL_GFF_START_POS(gff_feature) -
 			    POS_LIST_POSITIONS(pos_list, c) - 1);
 	}
 	else
 	{
 	    bed_set_start_pos(&bed_feature[c],
-			      GFF_END_POS(gff_feature) +
+			      BL_GFF_END_POS(gff_feature) +
 			      POS_LIST_POSITIONS(pos_list, c));
 	    bed_set_end_pos(&bed_feature[c],
-			    GFF_END_POS(gff_feature) + 
+			    BL_GFF_END_POS(gff_feature) + 
 			    POS_LIST_POSITIONS(pos_list, c + 1));
 	}
 	
