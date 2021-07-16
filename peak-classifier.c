@@ -195,10 +195,10 @@ int     main(int argc,char *argv[])
 	    if ( midpoints_only )
 	    {
 		// Replace peak start/end with midpoint coordinates
-		bed_set_start_pos(&bed_feature,
+		BL_BED_SET_START_POS(&bed_feature,
 		    (BL_BED_START_POS(&bed_feature) + BL_BED_END_POS(&bed_feature))
 		    / 2);
-		bed_set_end_pos(&bed_feature, BL_BED_START_POS(&bed_feature) + 1);
+		BL_BED_SET_END_POS(&bed_feature, BL_BED_START_POS(&bed_feature) + 1);
 	    }
 	    bed_write_feature(intersect_pipe, &bed_feature,
 			      BL_BED_FIELD_ALL);
@@ -225,11 +225,11 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 		    const char *augmented_filename)
 
 {
-    FILE            *bed_stream;
-    bl_bed_t   bed_feature = BL_BED_INIT;
-    bl_gff_t   gff_feature = BL_GFF_INIT;
-    char            *feature,
-		    strand;
+    FILE        *bed_stream;
+    bl_bed_t    bed_feature = BL_BED_INIT;
+    bl_gff_t    gff_feature = BL_GFF_INIT;
+    char        *feature,
+		strand;
     bl_pos_list_t      pos_list = BL_POS_LIST_INIT;
     
     if ( (bed_stream = fopen(augmented_filename, "w")) == NULL )
@@ -246,8 +246,8 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     bl_pos_list_sort(&pos_list, BL_POS_LIST_ASCENDING);
 
     // Write all of the first 4 fields to the feature file
-    bed_set_fields(&bed_feature, 6);
-    bed_set_score(&bed_feature, 0);
+    BL_BED_SET_FIELDS(&bed_feature, 6);
+    BL_BED_SET_SCORE(&bed_feature, 0);
     
     fputs("Augmenting GFF3 data...\n", stderr);
     gff_skip_header(gff_stream);
@@ -311,9 +311,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		    strand,
 		    name[BL_BED_NAME_MAX_CHARS + 1];
 
-    bed_set_fields(&bed_feature, 6);
+    BL_BED_SET_FIELDS(&bed_feature, 6);
     strand = BL_GFF_STRAND(gene_feature);
-    if ( bed_set_strand(&bed_feature, strand) != BL_DATA_OK )
+    if ( BL_BED_SET_STRAND(&bed_feature, strand) != BL_DATA_OK )
     {
 	fputs("gff_process_subfeatures().\n", stderr);
 	exit(EX_DATAERR);
@@ -338,19 +338,19 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    if ( !first_exon )
 	    {
 		intron_end = BL_GFF_START_POS(&subfeature) - 1;
-		bed_set_chromosome(&bed_feature, BL_GFF_SEQUENCE(&subfeature));
+		BL_BED_SET_CHROMOSOME(&bed_feature, BL_GFF_SEQUENCE(&subfeature));
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
 		 */
-		bed_set_start_pos(&bed_feature, intron_start);
+		BL_BED_SET_START_POS(&bed_feature, intron_start);
 		/*
 		 *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
 		 *  GFF is the same
 		 */
-		bed_set_end_pos(&bed_feature, intron_end);
+		BL_BED_SET_END_POS(&bed_feature, intron_end);
 		snprintf(name, BL_BED_NAME_MAX_CHARS, "intron");
-		bed_set_name(&bed_feature, name);
+		BL_BED_SET_NAME(&bed_feature, name);
 		bed_write_feature(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
 	    }
 	    
@@ -387,9 +387,9 @@ void    generate_upstream_features(FILE *feature_stream,
 
     for (c = 0; c < BL_POS_LIST_COUNT(pos_list) - 1; ++c)
     {
-	bed_set_fields(&bed_feature[c], 6);
-	bed_set_strand(&bed_feature[c], strand);
-	bed_set_chromosome(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature));
+	BL_BED_SET_FIELDS(&bed_feature[c], 6);
+	BL_BED_SET_STRAND(&bed_feature[c], strand);
+	BL_BED_SET_CHROMOSOME(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature));
 	/*
 	 *  BED start is 0-based and inclusive
 	 *  GFF is 1-based and inclusive
@@ -398,26 +398,26 @@ void    generate_upstream_features(FILE *feature_stream,
 	 */
 	if ( strand == '+' )
 	{
-	    bed_set_start_pos(&bed_feature[c],
+	    BL_BED_SET_START_POS(&bed_feature[c],
 			      BL_GFF_START_POS(gff_feature) - 
 			      BL_POS_LIST_POSITIONS(pos_list, c + 1) - 1);
-	    bed_set_end_pos(&bed_feature[c],
+	    BL_BED_SET_END_POS(&bed_feature[c],
 			    BL_GFF_START_POS(gff_feature) -
 			    BL_POS_LIST_POSITIONS(pos_list, c) - 1);
 	}
 	else
 	{
-	    bed_set_start_pos(&bed_feature[c],
+	    BL_BED_SET_START_POS(&bed_feature[c],
 			      BL_GFF_END_POS(gff_feature) +
 			      BL_POS_LIST_POSITIONS(pos_list, c));
-	    bed_set_end_pos(&bed_feature[c],
+	    BL_BED_SET_END_POS(&bed_feature[c],
 			    BL_GFF_END_POS(gff_feature) + 
 			    BL_POS_LIST_POSITIONS(pos_list, c + 1));
 	}
 	
 	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRIu64,
 		 BL_POS_LIST_POSITIONS(pos_list, c + 1));
-	bed_set_name(&bed_feature[c], name);
+	BL_BED_SET_NAME(&bed_feature[c], name);
     }
     
     if ( strand == '-' )
