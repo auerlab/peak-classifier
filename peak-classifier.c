@@ -190,7 +190,7 @@ int     main(int argc,char *argv[])
 		    argv[0]);
 	    return EX_CANTCREAT;
 	}
-	while ( bl_bed_read_feature(peak_stream, &bed_feature, BL_BED_FIELD_ALL) != EOF )
+	while ( bl_bed_read(peak_stream, &bed_feature, BL_BED_FIELD_ALL) != EOF )
 	{
 	    if ( midpoints_only )
 	    {
@@ -200,7 +200,7 @@ int     main(int argc,char *argv[])
 		    / 2);
 		BL_BED_SET_END_POS(&bed_feature, BL_BED_START_POS(&bed_feature) + 1);
 	    }
-	    bl_bed_write_feature(intersect_pipe, &bed_feature,
+	    bl_bed_write(intersect_pipe, &bed_feature,
 			      BL_BED_FIELD_ALL);
 	}
 	pclose(intersect_pipe);
@@ -251,7 +251,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     
     fputs("Augmenting GFF3 data...\n", stderr);
     bl_gff_skip_header(gff_stream);
-    while ( bl_gff_read_feature(gff_stream, &gff_feature, BL_GFF_FIELD_ALL) == BL_READ_OK )
+    while ( bl_gff_read(gff_stream, &gff_feature, BL_GFF_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
 	if ( strisint(BL_GFF_SEQUENCE(&gff_feature), 10) )
@@ -265,7 +265,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 		// Write out upstream regions for likely regulatory elements
 		strand = BL_GFF_STRAND(&gff_feature);
 		bl_gff_to_bed(&bed_feature, &gff_feature);
-		bl_bed_write_feature(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
+		bl_bed_write(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
 		
 		if ( strand == '+' )
 		    generate_upstream_features(bed_stream, &gff_feature, &pos_list);
@@ -277,7 +277,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 	    else if ( strcmp(feature, "chromosome") != 0 )
 	    {
 		bl_gff_to_bed(&bed_feature, &gff_feature);
-		bl_bed_write_feature(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
+		bl_bed_write(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
 		fputs("###\n", bed_stream);
 	    }
 	}
@@ -319,7 +319,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	exit(EX_DATAERR);
     }
     
-    while ( (bl_gff_read_feature(gff_stream, &subfeature, BL_GFF_FIELD_ALL) == BL_READ_OK) &&
+    while ( (bl_gff_read(gff_stream, &subfeature, BL_GFF_FIELD_ALL) == BL_READ_OK) &&
 	    (strcmp(subfeature.name, "###") != 0) )
     {
 	feature = BL_GFF_NAME(&subfeature);
@@ -351,7 +351,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		BL_BED_SET_END_POS(&bed_feature, intron_end);
 		snprintf(name, BL_BED_NAME_MAX_CHARS, "intron");
 		BL_BED_SET_NAME(&bed_feature, name);
-		bl_bed_write_feature(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
+		bl_bed_write(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
 	    }
 	    
 	    intron_start = BL_GFF_END_POS(&subfeature);
@@ -359,7 +359,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	}
 	
 	bl_gff_to_bed(&bed_feature, &subfeature);
-	bl_bed_write_feature(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
+	bl_bed_write(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
     }
 }
 
@@ -423,12 +423,12 @@ void    generate_upstream_features(FILE *feature_stream,
     if ( strand == '-' )
     {
 	for (c = 0; c < BL_POS_LIST_COUNT(pos_list) - 1; ++c)
-	    bl_bed_write_feature(feature_stream, &bed_feature[c], BL_BED_FIELD_ALL);
+	    bl_bed_write(feature_stream, &bed_feature[c], BL_BED_FIELD_ALL);
     }
     else
     {
 	for (c = BL_POS_LIST_COUNT(pos_list) - 2; c >= 0; --c)
-	    bl_bed_write_feature(feature_stream, &bed_feature[c], BL_BED_FIELD_ALL);
+	    bl_bed_write(feature_stream, &bed_feature[c], BL_BED_FIELD_ALL);
     }
 }
 
