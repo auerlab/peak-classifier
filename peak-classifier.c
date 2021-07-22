@@ -338,7 +338,8 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    if ( !first_exon )
 	    {
 		intron_end = BL_GFF_START(&subfeature) - 1;
-		BL_BED_SET_CHROM(&bed_feature, BL_GFF_SEQUENCE(&subfeature));
+		BL_BED_SET_CHROM_CPY(&bed_feature, BL_GFF_SEQUENCE(&subfeature),
+				 BL_CHROM_MAX_CHARS + 1);
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
@@ -350,7 +351,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		 */
 		BL_BED_SET_CHROM_END(&bed_feature, intron_end);
 		snprintf(name, BL_BED_NAME_MAX_CHARS, "intron");
-		BL_BED_SET_NAME(&bed_feature, name);
+		BL_BED_SET_NAME_CPY(&bed_feature, name, BL_BED_NAME_MAX_CHARS + 1);
 		bl_bed_write(bed_stream, &bed_feature, BL_BED_FIELD_ALL);
 	    }
 	    
@@ -389,7 +390,8 @@ void    generate_upstream_features(FILE *feature_stream,
     {
 	BL_BED_SET_FIELDS(&bed_feature[c], 6);
 	BL_BED_SET_STRAND(&bed_feature[c], strand);
-	BL_BED_SET_CHROM(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature));
+	BL_BED_SET_CHROM_CPY(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature),
+			     BL_CHROM_MAX_CHARS + 1);
 	/*
 	 *  BED start is 0-based and inclusive
 	 *  GFF is 1-based and inclusive
@@ -417,7 +419,7 @@ void    generate_upstream_features(FILE *feature_stream,
 	
 	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRIu64,
 		 BL_POS_LIST_POSITIONS(pos_list, c + 1));
-	BL_BED_SET_NAME(&bed_feature[c], name);
+	BL_BED_SET_NAME_CPY(&bed_feature[c], name, BL_BED_NAME_MAX_CHARS + 1);
     }
     
     if ( strand == '-' )
