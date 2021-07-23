@@ -402,23 +402,23 @@ void    generate_upstream_features(FILE *feature_stream,
 	{
 	    BL_BED_SET_CHROM_START(&bed_feature[c],
 			      BL_GFF_START(gff_feature) - 
-			      BL_POS_LIST_POSITIONS(pos_list, c + 1) - 1);
+			      BL_POS_LIST_POSITIONS_AE(pos_list, c + 1) - 1);
 	    BL_BED_SET_CHROM_END(&bed_feature[c],
 			    BL_GFF_START(gff_feature) -
-			    BL_POS_LIST_POSITIONS(pos_list, c) - 1);
+			    BL_POS_LIST_POSITIONS_AE(pos_list, c) - 1);
 	}
 	else
 	{
 	    BL_BED_SET_CHROM_START(&bed_feature[c],
 			      BL_GFF_END(gff_feature) +
-			      BL_POS_LIST_POSITIONS(pos_list, c));
+			      BL_POS_LIST_POSITIONS_AE(pos_list, c));
 	    BL_BED_SET_CHROM_END(&bed_feature[c],
 			    BL_GFF_END(gff_feature) + 
-			    BL_POS_LIST_POSITIONS(pos_list, c + 1));
+			    BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
 	}
 	
 	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRIu64,
-		 BL_POS_LIST_POSITIONS(pos_list, c + 1));
+		 BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
 	BL_BED_SET_NAME_CPY(&bed_feature[c], name, BL_BED_NAME_MAX_CHARS + 1);
     }
     
