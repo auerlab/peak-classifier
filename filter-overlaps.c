@@ -13,7 +13,8 @@
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
-#include <xtend.h>
+#include <xtend/file.h>
+#include <xtend/dsv.h>
 #include "filter-overlaps.h"
 
 int     main(int argc,char *argv[])

@@ -18,7 +18,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <assert.h>
-#include <xtend.h>
+#include <xtend/string.h>
+#include <xtend/file.h>
 #include <biolibc/bed.h>
 #include <biolibc/gff.h>
 #include <biolibc/pos-list.h>
