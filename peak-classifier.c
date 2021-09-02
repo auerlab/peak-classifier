@@ -314,9 +314,9 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 
     BL_BED_SET_FIELDS(&bed_feature, 6);
     strand = BL_GFF_STRAND(gene_feature);
-    if ( BL_BED_SET_STRAND(&bed_feature, strand) != BL_DATA_OK )
+    if ( bl_bed_set_strand(&bed_feature, strand) != BL_DATA_OK )
     {
-	fputs("gff_process_subfeatures().\n", stderr);
+	fputs("gff_process_subfeatures(): bl_bed_set_strand() failed..\n", stderr);
 	exit(EX_DATAERR);
     }
     
