@@ -76,7 +76,7 @@ overlap.
 
 The output file contains the location of the
 peak in the first three columns, followed by the location, name, and strand
-of the GFF feature, and finally the amount of number of bases of overlap
+of the GFF feature, and finally the number of bases of overlap
 between the two.  The file does not conform to any
 standard format, though the first three columns follow BED file format and
 the 4th and 5th columns use BED coordinates (0-based, end coordinate is 1
@@ -99,11 +99,11 @@ past the last base in the feature).
 .fi
 
 Output can be further processed by
-.B filter-overlaps
+.B filter-overlaps(1)
 to gather information on features of interest.
 
 .SH "SEE ALSO"
-filter-overlaps, feature-view, bedtools, MACS2, DESeq2
+filter-overlaps(1), feature-view(1), bedtools, MACS2, DESeq2
 
 .SH BUGS
 Please report bugs to the author and send patches in unified diff format.

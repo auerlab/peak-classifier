@@ -16,7 +16,7 @@ filter-overlaps overlaps-file.tsv output-file.tsv feature [feature ...]
 .SH "PURPOSE"
 
 .B Filter-overlaps
-filters the output of peak-classifier for GFF features indicated on the
+filters the output of peak-classifier(1) for GFF features indicated on the
 command-line.
 
 .SH "DESCRIPTION"
@@ -46,10 +46,10 @@ filter-overlaps overlaps.tsv filter-overlaps.tsv intro exon upstream1000
 .ad
 .fi
 
-then only the overlap with the intron will be passed to the output.
+then only the overlap with the intron will be reported in the output.
 
 .SH "SEE ALSO"
-peak-classifier, feature-view, MACS2, DESeq2
+peak-classifier(1), feature-view(1), MACS2, DESeq2
 
 .SH BUGS
 Please report bugs to the author and send patches in unified diff format.
