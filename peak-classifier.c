@@ -38,7 +38,7 @@ int     main(int argc,char *argv[])
 	    // Default, override with --upstream-boundaries
     char    *upstream_boundaries = "1000,10000,100000",
 	    *p,
-	    cmd[CMD_MAX + 1],
+	    cmd[PEAK_CMD_MAX + 1],
 	    *redirect_overwrite,
 	    *redirect_append,
 	    *overlaps_filename,
@@ -150,7 +150,7 @@ int     main(int argc,char *argv[])
     else
     {
 	// LC_ALL=C makes sort assume 1 byte/char, which improves speed
-	snprintf(cmd, CMD_MAX, "env LC_ALL=C grep -v '^#' %s | "
+	snprintf(cmd, PEAK_CMD_MAX, "env LC_ALL=C grep -v '^#' %s | "
 		"sort -n -k 1 -k 2 -k 3 > %s\n",
 		augmented_filename, sorted_filename);
 	fputs("Sorting...\n", stderr);
@@ -163,7 +163,7 @@ int     main(int argc,char *argv[])
     }
     
     fputs("Finding intersects...\n", stderr);
-    snprintf(cmd, CMD_MAX,
+    snprintf(cmd, PEAK_CMD_MAX,
 	    "printf '#Chr\tP-start\tP-end\tF-start\tF-end\tF-name\tStrand\tOverlap\n'%s%s",
 	    redirect_overwrite, overlaps_filename);
     if ( (status = system(cmd)) == 0 )
@@ -175,7 +175,7 @@ int     main(int argc,char *argv[])
 	 */
 	 
 	// Insert "set -x; " for debugging
-	snprintf(cmd, CMD_MAX,
+	snprintf(cmd, PEAK_CMD_MAX,
 		 "bedtools intersect -a - -b %s -f %g -F %g %s -wao"
 		 "| awk 'BEGIN { OFS=IFS; } { if ( $8 == -1 ) "
 		    "$9 = \"upstream-beyond\"; $12 = $3 - $2; "
