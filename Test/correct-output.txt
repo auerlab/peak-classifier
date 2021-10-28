@@ -1,0 +1,74 @@
+1-base overlaps:
+
+Augmenting GFF3 data...
+Sorting...
+Finding intersects...
+Total unique peaks: 9500
+Overlaps with five_prime_utr      :    1754 (18%)
+Overlaps with three_prime_utr     :     165 ( 1%)
+Overlaps with intron              :    3995 (42%)
+Overlaps with exon                :     161 ( 1%)
+Overlaps with upstream1000        :     166 ( 1%)
+Overlaps with upstream10000       :     654 ( 6%)
+Overlaps with upstream100000      :    1904 (20%)
+Overlaps with upstream-beyond     :     312 ( 3%)
+
+20% peak overlaps:
+
+Using existing ../Mus_musculus.GRCm38.100-augmented.bed...
+Using existing ../Mus_musculus.GRCm38.100-augmented+sorted.bed...
+Finding intersects...
+Total unique peaks: 9500
+Overlaps with five_prime_utr      :    1091 (11%)
+Overlaps with three_prime_utr     :     137 ( 1%)
+Overlaps with intron              :    4410 (46%)
+Overlaps with exon                :     314 ( 3%)
+Overlaps with upstream1000        :     271 ( 2%)
+Overlaps with upstream10000       :     666 ( 7%)
+Overlaps with upstream100000      :    1909 (20%)
+Overlaps with upstream-beyond     :     362 ( 3%)
+
+20% GFF feature overlaps:
+
+Using existing ../Mus_musculus.GRCm38.100-augmented.bed...
+Using existing ../Mus_musculus.GRCm38.100-augmented+sorted.bed...
+Finding intersects...
+Total unique peaks: 9500
+Overlaps with five_prime_utr      :    1711 (18%)
+Overlaps with three_prime_utr     :     107 ( 1%)
+Overlaps with intron              :     418 ( 4%)
+Overlaps with exon                :     437 ( 4%)
+Overlaps with upstream1000        :     229 ( 2%)
+Overlaps with upstream10000       :       0 ( 0%)
+Overlaps with upstream100000      :       0 ( 0%)
+Overlaps with upstream-beyond     :    3109 (32%)
+
+20% either peak or GFF feature overlaps:
+
+Using existing ../Mus_musculus.GRCm38.100-augmented.bed...
+Using existing ../Mus_musculus.GRCm38.100-augmented+sorted.bed...
+Finding intersects...
+Total unique peaks: 9500
+Overlaps with five_prime_utr      :    1754 (18%)
+Overlaps with three_prime_utr     :     165 ( 1%)
+Overlaps with intron              :    3995 (42%)
+Overlaps with exon                :     161 ( 1%)
+Overlaps with upstream1000        :     166 ( 1%)
+Overlaps with upstream10000       :     654 ( 6%)
+Overlaps with upstream100000      :    1904 (20%)
+Overlaps with upstream-beyond     :     312 ( 3%)
+
+Midpoints only:
+
+Using existing ../Mus_musculus.GRCm38.100-augmented.bed...
+Using existing ../Mus_musculus.GRCm38.100-augmented+sorted.bed...
+Finding intersects...
+Total unique peaks: 9500
+Overlaps with five_prime_utr      :     667 ( 7%)
+Overlaps with three_prime_utr     :     113 ( 1%)
+Overlaps with intron              :    4344 (45%)
+Overlaps with exon                :     380 ( 4%)
+Overlaps with upstream1000        :     684 ( 7%)
+Overlaps with upstream10000       :     679 ( 7%)
+Overlaps with upstream100000      :    1929 (20%)
+Overlaps with upstream-beyond     :     422 ( 4%)

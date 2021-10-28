@@ -17,6 +17,8 @@ cd Test
 # Use cave-man installed libs if available
 export LD_LIBRARY_PATH=../../local/lib:/usr/lib64:/usr/lib
 
+rm -f ../Mus_musculus.GRCm38.100-augmented*
+
 printf "\n1-base overlaps:\n\n"
 ../peak-classifier test.bed.xz $gff \
     test-overlaps.tsv
