@@ -196,10 +196,10 @@ int     main(int argc,char *argv[])
 	    if ( midpoints_only )
 	    {
 		// Replace peak start/end with midpoint coordinates
-		BL_BED_SET_CHROM_START(&bed_feature,
+		bl_bed_set_chrom_start(&bed_feature,
 		    (BL_BED_CHROM_START(&bed_feature) + BL_BED_CHROM_END(&bed_feature))
 		    / 2);
-		BL_BED_SET_CHROM_END(&bed_feature, BL_BED_CHROM_START(&bed_feature) + 1);
+		bl_bed_set_chrom_end(&bed_feature, BL_BED_CHROM_START(&bed_feature) + 1);
 	    }
 	    bl_bed_write(&bed_feature, BL_BED_FIELD_ALL, intersect_pipe);
 	}
@@ -247,8 +247,8 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 
     // Write all of the first 4 fields to the feature file
     // Done within bl_gff_to_bed() now
-    //BL_BED_SET_FIELDS(&bed_feature, 6);
-    //BL_BED_SET_SCORE(&bed_feature, 0);
+    //bl_bed_set_fields(&bed_feature, 6);
+    //bl_bed_set_score(&bed_feature, 0);
     
     fputs("Augmenting GFF3 data...\n", stderr);
     bl_gff_skip_header(gff_stream);
@@ -312,7 +312,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 		    strand,
 		    name[BL_BED_NAME_MAX_CHARS + 1];
 
-    BL_BED_SET_FIELDS(&bed_feature, 6);
+    bl_bed_set_fields(&bed_feature, 6);
     strand = BL_GFF_STRAND(gene_feature);
     if ( bl_bed_set_strand(&bed_feature, strand) != BL_DATA_OK )
     {
@@ -339,20 +339,20 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    if ( !first_exon )
 	    {
 		intron_end = BL_GFF_START(&subfeature) - 1;
-		BL_BED_SET_CHROM_CPY(&bed_feature, BL_GFF_SEQUENCE(&subfeature),
+		bl_bed_set_chrom_cpy(&bed_feature, BL_GFF_SEQUENCE(&subfeature),
 				 BL_CHROM_MAX_CHARS + 1);
 		/*
 		 *  BED start is 0-based and inclusive
 		 *  GFF is 1-based and inclusive
 		 */
-		BL_BED_SET_CHROM_START(&bed_feature, intron_start);
+		bl_bed_set_chrom_start(&bed_feature, intron_start);
 		/*
 		 *  BED end is 0-base and inclusive (or 1-based and non-inclusive)
 		 *  GFF is the same
 		 */
-		BL_BED_SET_CHROM_END(&bed_feature, intron_end);
+		bl_bed_set_chrom_end(&bed_feature, intron_end);
 		snprintf(name, BL_BED_NAME_MAX_CHARS, "intron");
-		BL_BED_SET_NAME_CPY(&bed_feature, name, BL_BED_NAME_MAX_CHARS + 1);
+		bl_bed_set_name_cpy(&bed_feature, name, BL_BED_NAME_MAX_CHARS + 1);
 		bl_bed_write(&bed_feature, BL_BED_FIELD_ALL, bed_stream);
 	    }
 	    
@@ -389,9 +389,9 @@ void    generate_upstream_features(FILE *feature_stream,
 
     for (c = 0; c < BL_POS_LIST_COUNT(pos_list) - 1; ++c)
     {
-	BL_BED_SET_FIELDS(&bed_feature[c], 6);
-	BL_BED_SET_STRAND(&bed_feature[c], strand);
-	BL_BED_SET_CHROM_CPY(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature),
+	bl_bed_set_fields(&bed_feature[c], 6);
+	bl_bed_set_strand(&bed_feature[c], strand);
+	bl_bed_set_chrom_cpy(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature),
 			     BL_CHROM_MAX_CHARS + 1);
 	/*
 	 *  BED start is 0-based and inclusive
@@ -401,26 +401,26 @@ void    generate_upstream_features(FILE *feature_stream,
 	 */
 	if ( strand == '+' )
 	{
-	    BL_BED_SET_CHROM_START(&bed_feature[c],
+	    bl_bed_set_chrom_start(&bed_feature[c],
 			      BL_GFF_START(gff_feature) - 
 			      BL_POS_LIST_POSITIONS_AE(pos_list, c + 1) - 1);
-	    BL_BED_SET_CHROM_END(&bed_feature[c],
+	    bl_bed_set_chrom_end(&bed_feature[c],
 			    BL_GFF_START(gff_feature) -
 			    BL_POS_LIST_POSITIONS_AE(pos_list, c) - 1);
 	}
 	else
 	{
-	    BL_BED_SET_CHROM_START(&bed_feature[c],
+	    bl_bed_set_chrom_start(&bed_feature[c],
 			      BL_GFF_END(gff_feature) +
 			      BL_POS_LIST_POSITIONS_AE(pos_list, c));
-	    BL_BED_SET_CHROM_END(&bed_feature[c],
+	    bl_bed_set_chrom_end(&bed_feature[c],
 			    BL_GFF_END(gff_feature) + 
 			    BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
 	}
 	
 	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRIu64,
 		 BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
-	BL_BED_SET_NAME_CPY(&bed_feature[c], name, BL_BED_NAME_MAX_CHARS + 1);
+	bl_bed_set_name_cpy(&bed_feature[c], name, BL_BED_NAME_MAX_CHARS + 1);
     }
     
     if ( strand == '-' )
