@@ -255,9 +255,9 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     while ( bl_gff_read(&gff_feature, gff_stream, BL_GFF_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( strisint(BL_GFF_SEQUENCE(&gff_feature), 10) )
+	if ( strisint(BL_GFF_SEQID(&gff_feature), 10) )
 	{
-	    feature = BL_GFF_FEATURE(&gff_feature);
+	    feature = BL_GFF_TYPE(&gff_feature);
 	    // FIXME: Rely on parent IDs instead of ###?
 	    if ( strcmp(feature, "###") == 0 )
 		fputs("###\n", bed_stream);
@@ -321,16 +321,16 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     }
     
     while ( (bl_gff_read(&subfeature, gff_stream, BL_GFF_FIELD_ALL) == BL_READ_OK) &&
-	    (strcmp(BL_GFF_FEATURE(&subfeature), "###") != 0) )
+	    (strcmp(BL_GFF_TYPE(&subfeature), "###") != 0) )
     {
-	feature = BL_GFF_FEATURE(&subfeature);
+	feature = BL_GFF_TYPE(&subfeature);
 	exon = (strcmp(feature, "exon") == 0);
 
 	// mRNA or lnc_RNA mark the start of a new set of exons
-	if ( (strstr(BL_GFF_FEATURE(&subfeature), "RNA") != NULL) ||
-	     (strstr(BL_GFF_FEATURE(&subfeature), "transcript") != NULL) ||
-	     (strstr(BL_GFF_FEATURE(&subfeature), "gene_segment") != NULL) ||
-	     (strstr(BL_GFF_FEATURE(&subfeature), "_overlapping_ncrna") != NULL) )
+	if ( (strstr(BL_GFF_TYPE(&subfeature), "RNA") != NULL) ||
+	     (strstr(BL_GFF_TYPE(&subfeature), "transcript") != NULL) ||
+	     (strstr(BL_GFF_TYPE(&subfeature), "gene_segment") != NULL) ||
+	     (strstr(BL_GFF_TYPE(&subfeature), "_overlapping_ncrna") != NULL) )
 	    first_exon = true;
 	
 	// Generate introns between exons
@@ -339,7 +339,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	    if ( !first_exon )
 	    {
 		intron_end = BL_GFF_START(&subfeature) - 1;
-		bl_bed_set_chrom_cpy(&bed_feature, BL_GFF_SEQUENCE(&subfeature),
+		bl_bed_set_chrom_cpy(&bed_feature, BL_GFF_SEQID(&subfeature),
 				 BL_CHROM_MAX_CHARS + 1);
 		/*
 		 *  BED start is 0-based and inclusive
@@ -391,7 +391,7 @@ void    generate_upstream_features(FILE *feature_stream,
     {
 	bl_bed_set_fields(&bed_feature[c], 6);
 	bl_bed_set_strand(&bed_feature[c], strand);
-	bl_bed_set_chrom_cpy(&bed_feature[c], BL_GFF_SEQUENCE(gff_feature),
+	bl_bed_set_chrom_cpy(&bed_feature[c], BL_GFF_SEQID(gff_feature),
 			     BL_CHROM_MAX_CHARS + 1);
 	/*
 	 *  BED start is 0-based and inclusive
