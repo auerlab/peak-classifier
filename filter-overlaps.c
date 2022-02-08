@@ -87,11 +87,11 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     for (c = 0; c < MAX_OVERLAP_FEATURES; ++c)
 	feature_overlaps[c]= 0;
     
-    delim = dsv_read_line(infile, &dsv_line, "\t");
+    delim = dsv_line_read(&dsv_line, infile, "\t");
     while ( delim != EOF )
     {
-	dsv_free_line(&last_line);
-	dsv_copy_line(&last_line, &dsv_line);
+	dsv_line_free(&last_line);
+	dsv_line_copy(&last_line, &dsv_line);
 	/*
 	 *  If this is a keeper (in the features list), check subsequent
 	 *  lines with the same peak for higher ranking features.  Input
@@ -101,9 +101,9 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 	if ( (keeper_rank = feature_rank(&dsv_line, features)) != 0 )
 	{
 	    //fprintf(stderr, "%s %zu\n", DSV_FIELD(&dsv_line, 6), keeper_rank);
-	    dsv_copy_line(&keeper, &dsv_line);
-	    dsv_free_line(&dsv_line);
-	    while ( ((delim = dsv_read_line(infile, &dsv_line, "\t")) != EOF)
+	    dsv_line_copy(&keeper, &dsv_line);
+	    dsv_line_free(&dsv_line);
+	    while ( ((delim = dsv_line_read(&dsv_line, infile, "\t")) != EOF)
 		    && same_peak(&dsv_line, &keeper) )
 	    {
 		new_rank = feature_rank(&dsv_line, features);
@@ -113,20 +113,20 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 		    /*fprintf(stderr, "%s:%zu outranks %s:%zu.\n",
 			    DSV_FIELD(&dsv_line, 6), new_rank,
 			    DSV_FIELD(&keeper, 6), keeper_rank);*/
-		    dsv_free_line(&keeper);
-		    dsv_copy_line(&keeper, &dsv_line);
+		    dsv_line_free(&keeper);
+		    dsv_line_copy(&keeper, &dsv_line);
 		    keeper_rank = new_rank;
 		}
 	    }
 	    ++feature_overlaps[keeper_rank - 1];
-	    dsv_write_line(outfile, &keeper);
-	    dsv_free_line(&keeper);
+	    dsv_line_write(&keeper, outfile);
+	    dsv_line_free(&keeper);
 	}
 	else
 	{
 	    // Not an interesting feature, toss it
-	    dsv_free_line(&dsv_line);
-	    delim = dsv_read_line(infile, &dsv_line, "\t");
+	    dsv_line_free(&dsv_line);
+	    delim = dsv_line_read(&dsv_line, infile, "\t");
 	}
 	if ( (delim != EOF) && !same_peak(&dsv_line, &last_line) )
 	    ++unique_peaks;
