@@ -91,7 +91,7 @@ int     main(int argc,char *argv[])
 	peak_stream = stdin;
     else
     {
-	assert(valid_extension(argv[c], ".bed"));
+	assert(xt_valid_extension(argv[c], ".bed"));
 	if ( (peak_stream = xt_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
@@ -107,7 +107,7 @@ int     main(int argc,char *argv[])
     }
     else
     {
-	assert(valid_extension(argv[c], ".gff3"));
+	assert(xt_valid_extension(argv[c], ".gff3"));
 	if ( (gff_stream = xt_fopen(argv[c], "r")) == NULL )
 	{
 	    fprintf(stderr, "%s: Cannot open %s: %s\n", argv[0], argv[c],
@@ -126,7 +126,7 @@ int     main(int argc,char *argv[])
     else
     {
 	overlaps_filename = argv[c];
-	assert(valid_extension(overlaps_filename, ".tsv"));
+	assert(xt_valid_extension(overlaps_filename, ".tsv"));
 	redirect_overwrite = " > ";
 	redirect_append = " >> ";
     }
