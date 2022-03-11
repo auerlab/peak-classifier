@@ -306,7 +306,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
     bl_bed_t   bed_feature = BL_BED_INIT;
     bool            first_exon = true,
 		    exon;
-    uint64_t        intron_start = 0,   // Silence bogus warning from GCC
+    int64_t         intron_start = 0,   // Silence bogus warning from GCC
 		    intron_end;
     char            *feature,
 		    strand,
@@ -418,7 +418,7 @@ void    generate_upstream_features(FILE *feature_stream,
 			    BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
 	}
 	
-	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRIu64,
+	snprintf(name, BL_BED_NAME_MAX_CHARS, "upstream%" PRId64,
 		 BL_POS_LIST_POSITIONS_AE(pos_list, c + 1));
 	bl_bed_set_name_cpy(&bed_feature[c], name, BL_BED_NAME_MAX_CHARS + 1);
     }
