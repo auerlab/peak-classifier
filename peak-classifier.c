@@ -227,7 +227,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
 {
     FILE        *bed_stream;
     bl_bed_t    bed_feature = BL_BED_INIT;
-    bl_gff_t    gff_feature = BL_GFF_INIT;
+    bl_gff_t    gff_feature;
     char        *feature,
 		strand;
     bl_pos_list_t      pos_list = BL_POS_LIST_INIT;
@@ -252,6 +252,7 @@ int     gff_augment(FILE *gff_stream, const char *upstream_boundaries,
     
     fputs("Augmenting GFF3 data...\n", stderr);
     bl_gff_skip_header(gff_stream);
+    bl_gff_init(&gff_feature);
     while ( bl_gff_read(&gff_feature, gff_stream, BL_GFF_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
@@ -302,7 +303,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 				bl_gff_t *gene_feature)
 
 {
-    bl_gff_t   subfeature = BL_GFF_INIT;
+    bl_gff_t   subfeature;
     bl_bed_t   bed_feature = BL_BED_INIT;
     bool            first_exon = true,
 		    exon;
@@ -320,6 +321,7 @@ void    gff_process_subfeatures(FILE *gff_stream, FILE *bed_stream,
 	exit(EX_DATAERR);
     }
     
+    bl_gff_init(&subfeature);
     while ( (bl_gff_read(&subfeature, gff_stream, BL_GFF_FIELD_ALL) == BL_READ_OK) &&
 	    (strcmp(BL_GFF_TYPE(&subfeature), "###") != 0) )
     {
