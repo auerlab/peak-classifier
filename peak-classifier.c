@@ -36,7 +36,7 @@ int     main(int argc,char *argv[])
 	    *gff_stream,
 	    *intersect_pipe;
 	    // Default, override with --upstream-boundaries
-    char    *upstream_boundaries = "1000,10000,100000",
+    char    *upstream_boundaries = "1000,10000,100000,200000,300000,400000,500000,600000,700000,800000",
 	    *p,
 	    cmd[PEAK_CMD_MAX + 1],
 	    *redirect_overwrite,
@@ -46,7 +46,8 @@ int     main(int argc,char *argv[])
 	    *end,
 	    *gff_stem,
 	    augmented_filename[PATH_MAX + 1],
-	    sorted_filename[PATH_MAX + 1];
+	    sorted_filename[PATH_MAX + 1],
+	    *sort;
     bool    midpoints_only = false;
     bl_bed_t   bed_feature;
     struct stat     file_info;
@@ -150,9 +151,15 @@ int     main(int argc,char *argv[])
     else
     {
 	// LC_ALL=C makes sort assume 1 byte/char, which improves speed
+	// gsort is faster than other implementations, so use it if
+	// available
+	if ( system("which gsort") == 0 )
+	    sort = "gsort";
+	else
+	    sort = "sort";
 	snprintf(cmd, PEAK_CMD_MAX, "env LC_ALL=C grep -v '^#' %s | "
-		"sort -n -k 1 -k 2 -k 3 > %s\n",
-		augmented_filename, sorted_filename);
+		"%s -n -k 1 -k 2 -k 3 > %s\n",
+		augmented_filename, sort, sorted_filename);
 	fputs("Sorting...\n", stderr);
 	if ( (status = system(cmd)) != 0 )
 	{

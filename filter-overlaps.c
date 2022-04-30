@@ -136,8 +136,8 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     
     printf("Total unique peaks: %zu\n", unique_peaks);
     for (c = 0; features[c] != NULL; ++c)
-	printf("Overlaps with %-20s: %7zu (%2zu%%)\n", features[c],
-		feature_overlaps[c], 100 * feature_overlaps[c] / unique_peaks);
+	printf("Overlaps with %-20s: %7zu (%3.1f%%)\n", features[c],
+		feature_overlaps[c], 100.0 * feature_overlaps[c] / unique_peaks);
     return EX_OK;
 }
 
