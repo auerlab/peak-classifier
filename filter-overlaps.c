@@ -100,7 +100,7 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 	 */
 	if ( (keeper_rank = feature_rank(&dsv_line, features)) != 0 )
 	{
-	    //fprintf(stderr, "%s %zu\n", DSV_FIELD(&dsv_line, 6), keeper_rank);
+	    //fprintf(stderr, "%s %zu\n", DSV_LINE_FIELDS_AE(&dsv_line, 5), keeper_rank);
 	    dsv_line_copy(&keeper, &dsv_line);
 	    dsv_line_free(&dsv_line);
 	    while ( ((delim = dsv_line_read(&dsv_line, infile, "\t")) != EOF)
@@ -111,8 +111,8 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 		if ( (new_rank != 0) && (new_rank < keeper_rank) )
 		{
 		    /*fprintf(stderr, "%s:%zu outranks %s:%zu.\n",
-			    DSV_FIELD(&dsv_line, 6), new_rank,
-			    DSV_FIELD(&keeper, 6), keeper_rank);*/
+			    DSV_LINE_FIELDS_AE(&dsv_line, 5), new_rank,
+			    DSV_LINE_FIELDS_AE(&keeper, 5), keeper_rank);*/
 		    dsv_line_free(&keeper);
 		    dsv_line_copy(&keeper, &dsv_line);
 		    keeper_rank = new_rank;
@@ -158,7 +158,7 @@ size_t  feature_rank(dsv_line_t *line, char *features[])
     int     c;
     
     for (c = 0; features[c] != NULL; ++c)
-	if ( strcasecmp(DSV_FIELD(line, 6), features[c]) == 0 )
+	if ( strcasecmp(DSV_LINE_FIELDS_AE(line, 5), features[c]) == 0 )
 	    return c+1;
     return 0;
 }
@@ -182,10 +182,10 @@ bool    same_peak(dsv_line_t *line1, dsv_line_t *line2)
 		*start2,
 		*end2;
     
-    start1 = DSV_FIELD(line1, 2);
-    end1 = DSV_FIELD(line1, 3);
-    start2 = DSV_FIELD(line2, 2);
-    end2 = DSV_FIELD(line2, 3);
+    start1 = DSV_LINE_FIELDS_AE(line1, 1);
+    end1 = DSV_LINE_FIELDS_AE(line1, 2);
+    start2 = DSV_LINE_FIELDS_AE(line2, 1);
+    end2 = DSV_LINE_FIELDS_AE(line2, 2);
     return (strcmp(start1, start2) == 0) && (strcmp(end1, end2) == 0);
 }
 
