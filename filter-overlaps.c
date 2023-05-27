@@ -56,9 +56,9 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 {
     FILE        *infile,
 		*outfile;
-    dsv_line_t  dsv_line = DSV_INIT,
-		keeper = DSV_INIT,
-		last_line = DSV_INIT;
+    dsv_line_t  *dsv_line = dsv_line_new(),
+		*keeper = dsv_line_new(),
+		*last_line = dsv_line_new();
     int         delim;
     size_t      keeper_rank,
 		new_rank,
@@ -87,48 +87,48 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     for (c = 0; c < MAX_OVERLAP_FEATURES; ++c)
 	feature_overlaps[c]= 0;
     
-    delim = dsv_line_read(&dsv_line, infile, "\t");
+    delim = dsv_line_read(dsv_line, infile, "\t");
     while ( delim != EOF )
     {
-	dsv_line_free(&last_line);
-	dsv_line_copy(&last_line, &dsv_line);
+	dsv_line_free(last_line);
+	dsv_line_copy(last_line, dsv_line);
 	/*
 	 *  If this is a keeper (in the features list), check subsequent
 	 *  lines with the same peak for higher ranking features.  Input
 	 *  is sorted by peak position, so lines with the same peak should
 	 *  be contiguous.
 	 */
-	if ( (keeper_rank = feature_rank(&dsv_line, features)) != 0 )
+	if ( (keeper_rank = feature_rank(dsv_line, features)) != 0 )
 	{
-	    //fprintf(stderr, "%s %zu\n", DSV_LINE_FIELDS_AE(&dsv_line, 5), keeper_rank);
-	    dsv_line_copy(&keeper, &dsv_line);
-	    dsv_line_free(&dsv_line);
-	    while ( ((delim = dsv_line_read(&dsv_line, infile, "\t")) != EOF)
-		    && same_peak(&dsv_line, &keeper) )
+	    //fprintf(stderr, "%s %zu\n", dsv_line_get_fields_ae(dsv_line, 5), keeper_rank);
+	    dsv_line_copy(keeper, dsv_line);
+	    dsv_line_free(dsv_line);
+	    while ( ((delim = dsv_line_read(dsv_line, infile, "\t")) != EOF)
+		    && same_peak(dsv_line, keeper) )
 	    {
-		new_rank = feature_rank(&dsv_line, features);
+		new_rank = feature_rank(dsv_line, features);
 		// If new feature has a higher rank, replace the old one
 		if ( (new_rank != 0) && (new_rank < keeper_rank) )
 		{
 		    /*fprintf(stderr, "%s:%zu outranks %s:%zu.\n",
-			    DSV_LINE_FIELDS_AE(&dsv_line, 5), new_rank,
-			    DSV_LINE_FIELDS_AE(&keeper, 5), keeper_rank);*/
-		    dsv_line_free(&keeper);
-		    dsv_line_copy(&keeper, &dsv_line);
+			    dsv_line_get_fields_ae(dsv_line, 5), new_rank,
+			    dsv_line_get_fields_ae(keeper, 5), keeper_rank);*/
+		    dsv_line_free(keeper);
+		    dsv_line_copy(keeper, dsv_line);
 		    keeper_rank = new_rank;
 		}
 	    }
 	    ++feature_overlaps[keeper_rank - 1];
-	    dsv_line_write(&keeper, outfile);
-	    dsv_line_free(&keeper);
+	    dsv_line_write(keeper, outfile);
+	    dsv_line_free(keeper);
 	}
 	else
 	{
 	    // Not an interesting feature, toss it
-	    dsv_line_free(&dsv_line);
-	    delim = dsv_line_read(&dsv_line, infile, "\t");
+	    dsv_line_free(dsv_line);
+	    delim = dsv_line_read(dsv_line, infile, "\t");
 	}
-	if ( (delim != EOF) && !same_peak(&dsv_line, &last_line) )
+	if ( (delim != EOF) && !same_peak(dsv_line, last_line) )
 	    ++unique_peaks;
     }
     fclose(infile);
@@ -158,7 +158,7 @@ size_t  feature_rank(dsv_line_t *line, char *features[])
     int     c;
     
     for (c = 0; features[c] != NULL; ++c)
-	if ( strcasecmp(DSV_LINE_FIELDS_AE(line, 5), features[c]) == 0 )
+	if ( strcasecmp(dsv_line_get_fields_ae(line, 5), features[c]) == 0 )
 	    return c+1;
     return 0;
 }
@@ -182,10 +182,10 @@ bool    same_peak(dsv_line_t *line1, dsv_line_t *line2)
 		*start2,
 		*end2;
     
-    start1 = DSV_LINE_FIELDS_AE(line1, 1);
-    end1 = DSV_LINE_FIELDS_AE(line1, 2);
-    start2 = DSV_LINE_FIELDS_AE(line2, 1);
-    end2 = DSV_LINE_FIELDS_AE(line2, 2);
+    start1 = dsv_line_get_fields_ae(line1, 1);
+    end1 = dsv_line_get_fields_ae(line1, 2);
+    start2 = dsv_line_get_fields_ae(line2, 1);
+    end2 = dsv_line_get_fields_ae(line2, 2);
     return (strcmp(start1, start2) == 0) && (strcmp(end1, end2) == 0);
 }
 
