@@ -1,11 +1,6 @@
-filter-overlaps.o: filter-overlaps.c ../local/include/xtend/file.h \
-  ../local/include/xtend/dsv.h filter-overlaps.h
+filter-overlaps.o: filter-overlaps.c filter-overlaps.h
 	${CC} -c ${CFLAGS} filter-overlaps.c
 
-peak-classifier.o: peak-classifier.c ../local/include/xtend/string.h \
-  ../local/include/xtend/file.h ../local/include/biolibc/bed.h \
-  ../local/include/biolibc/biolibc.h ../local/include/biolibc/gff.h \
-  ../local/include/biolibc/overlap.h ../local/include/biolibc/pos-list.h \
-  peak-classifier.h protos.h
+peak-classifier.o: peak-classifier.c peak-classifier.h protos.h
 	${CC} -c ${CFLAGS} peak-classifier.c
 
