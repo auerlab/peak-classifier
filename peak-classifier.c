@@ -263,7 +263,7 @@ int     gff3_augment(FILE *gff3_stream, const char *upstream_boundaries,
     while ( bl_gff3_read(&gff3_feature, gff3_stream, BL_GFF3_FIELD_ALL) == BL_READ_OK )
     {
 	// FIXME: Create a --autosomes-only flag to activate this check
-	if ( strisint(BL_GFF3_SEQID(&gff3_feature), 10) )
+	if ( xt_strisint(BL_GFF3_SEQID(&gff3_feature), 10) )
 	{
 	    feature = BL_GFF3_TYPE(&gff3_feature);
 	    // FIXME: Rely on parent IDs instead of ###?

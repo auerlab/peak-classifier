@@ -56,9 +56,9 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 {
     FILE        *infile,
 		*outfile;
-    dsv_line_t  *dsv_line = dsv_line_new(),
-		*keeper = dsv_line_new(),
-		*last_line = dsv_line_new();
+    xt_dsv_line_t  *dsv_line = xt_dsv_line_new(),
+		*keeper = xt_dsv_line_new(),
+		*last_line = xt_dsv_line_new();
     int         delim;
     size_t      keeper_rank,
 		new_rank,
@@ -87,11 +87,11 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
     for (c = 0; c < MAX_OVERLAP_FEATURES; ++c)
 	feature_overlaps[c]= 0;
     
-    delim = dsv_line_read(dsv_line, infile, "\t");
+    delim = xt_dsv_line_read(dsv_line, infile, "\t");
     while ( delim != EOF )
     {
-	dsv_line_free(last_line);
-	dsv_line_copy(last_line, dsv_line);
+	xt_dsv_line_free(last_line);
+	xt_dsv_line_copy(last_line, dsv_line);
 	/*
 	 *  If this is a keeper (in the features list), check subsequent
 	 *  lines with the same peak for higher ranking features.  Input
@@ -100,10 +100,10 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 	 */
 	if ( (keeper_rank = feature_rank(dsv_line, features)) != 0 )
 	{
-	    //fprintf(stderr, "%s %zu\n", dsv_line_get_fields_ae(dsv_line, 5), keeper_rank);
-	    dsv_line_copy(keeper, dsv_line);
-	    dsv_line_free(dsv_line);
-	    while ( ((delim = dsv_line_read(dsv_line, infile, "\t")) != EOF)
+	    //fprintf(stderr, "%s %zu\n", xt_dsv_line_get_fields_ae(dsv_line, 5), keeper_rank);
+	    xt_dsv_line_copy(keeper, dsv_line);
+	    xt_dsv_line_free(dsv_line);
+	    while ( ((delim = xt_dsv_line_read(dsv_line, infile, "\t")) != EOF)
 		    && same_peak(dsv_line, keeper) )
 	    {
 		new_rank = feature_rank(dsv_line, features);
@@ -111,22 +111,22 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
 		if ( (new_rank != 0) && (new_rank < keeper_rank) )
 		{
 		    /*fprintf(stderr, "%s:%zu outranks %s:%zu.\n",
-			    dsv_line_get_fields_ae(dsv_line, 5), new_rank,
-			    dsv_line_get_fields_ae(keeper, 5), keeper_rank);*/
-		    dsv_line_free(keeper);
-		    dsv_line_copy(keeper, dsv_line);
+			    xt_dsv_line_get_fields_ae(dsv_line, 5), new_rank,
+			    xt_dsv_line_get_fields_ae(keeper, 5), keeper_rank);*/
+		    xt_dsv_line_free(keeper);
+		    xt_dsv_line_copy(keeper, dsv_line);
 		    keeper_rank = new_rank;
 		}
 	    }
 	    ++feature_overlaps[keeper_rank - 1];
-	    dsv_line_write(keeper, outfile);
-	    dsv_line_free(keeper);
+	    xt_dsv_line_write(keeper, outfile);
+	    xt_dsv_line_free(keeper);
 	}
 	else
 	{
 	    // Not an interesting feature, toss it
-	    dsv_line_free(dsv_line);
-	    delim = dsv_line_read(dsv_line, infile, "\t");
+	    xt_dsv_line_free(dsv_line);
+	    delim = xt_dsv_line_read(dsv_line, infile, "\t");
 	}
 	if ( (delim != EOF) && !same_peak(dsv_line, last_line) )
 	    ++unique_peaks;
@@ -152,13 +152,13 @@ int     filter_overlaps(const char *overlaps_file, const char *output_file,
  *  2021-05-01  Jason Bacon Begin
  ***************************************************************************/
 
-size_t  feature_rank(dsv_line_t *line, char *features[])
+size_t  feature_rank(xt_dsv_line_t *line, char *features[])
 
 {
     int     c;
     
     for (c = 0; features[c] != NULL; ++c)
-	if ( strcasecmp(dsv_line_get_fields_ae(line, 5), features[c]) == 0 )
+	if ( strcasecmp(xt_dsv_line_get_fields_ae(line, 5), features[c]) == 0 )
 	    return c+1;
     return 0;
 }
@@ -174,7 +174,7 @@ size_t  feature_rank(dsv_line_t *line, char *features[])
  *  2021-05-01  Jason Bacon Begin
  ***************************************************************************/
 
-bool    same_peak(dsv_line_t *line1, dsv_line_t *line2)
+bool    same_peak(xt_dsv_line_t *line1, xt_dsv_line_t *line2)
 
 {
     char        *start1,
@@ -182,10 +182,10 @@ bool    same_peak(dsv_line_t *line1, dsv_line_t *line2)
 		*start2,
 		*end2;
     
-    start1 = dsv_line_get_fields_ae(line1, 1);
-    end1 = dsv_line_get_fields_ae(line1, 2);
-    start2 = dsv_line_get_fields_ae(line2, 1);
-    end2 = dsv_line_get_fields_ae(line2, 2);
+    start1 = xt_dsv_line_get_fields_ae(line1, 1);
+    end1 = xt_dsv_line_get_fields_ae(line1, 2);
+    start2 = xt_dsv_line_get_fields_ae(line2, 1);
+    end2 = xt_dsv_line_get_fields_ae(line2, 2);
     return (strcmp(start1, start2) == 0) && (strcmp(end1, end2) == 0);
 }
 
