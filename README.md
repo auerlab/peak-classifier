@@ -129,7 +129,7 @@ Then, assuming you selected current packages and the default prefix
 
 ```
 source ~/Pkgsrc/pkg/etc/pkgsrc.sh   # Or pkgsrc.csh for csh or tcsh
-cd ~/Pkgsrc/biology/peak-classifier
+cd ~/Pkgsrc/pkgsrc/biology/peak-classifier
 sbmake install clean clean-depends
 ```
 
