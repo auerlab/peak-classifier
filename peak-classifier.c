@@ -52,6 +52,12 @@ int     main(int argc,char *argv[])
     bl_bed_t   bed_feature;
     struct stat     file_info;
     
+    if ( (argc == 2) && (strcmp(argv[1],"--version")) == 0 )
+    {
+	printf("ad2vcf %s\n", VERSION);
+	return EX_OK;
+    }
+    
     if ( argc < 4 )
 	usage(argv);
     
@@ -449,9 +455,10 @@ void    usage(char *argv[])
 
 {
     fprintf(stderr,
-	    "\nUsage: %s [--upstream-boundaries pos[,pos ...]] "
+	    "\nUsage: %s --version"
+	    "\n       %s [--upstream-boundaries pos[,pos ...]] "
 	    "[--min-peak-overlap x.y] [--min-gff-overlap x.y] [--midpoints] "
-	    "peaks.bed features.gff3 overlaps.tsv\n\n", argv[0]);
+	    "peaks.bed features.gff3 overlaps.tsv\n\n", argv[0], argv[0]);
     fputs("Upstream boundaries are distances upstream from TSS, for which we want\n"
 	  "overlaps reported.  The default is 1000,10000,100000, which means features\n"
 	  "are generated for 1 to 1000, 1001 to 10000, and 10001 to 100000 bases\n"

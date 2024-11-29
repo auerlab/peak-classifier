@@ -83,6 +83,7 @@ MANDIR      ?= ${MANPREFIX}/man
 CC          ?= cc
 CFLAGS      ?= -Wall -g -O
 CFLAGS      += -Wno-char-subscripts     # NetBSD 10, gcc 10
+CFLAGS      += -DVERSION=\"`./version.sh`\"
 
 # Link command:
 # Use ${FC} to link when mixing C and Fortran
